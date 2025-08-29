@@ -99,9 +99,10 @@ export function TaskStatusDropdown({
     const shouldTaskProgressBe0 = (newStatus: string) => {
         const isNewStatusInProgress =
             newStatus === BACKEND_TASK_STATUS.IN_PROGRESS;
+        const isNewStatusAssigned = newStatus === BACKEND_TASK_STATUS.ASSIGNED;
         const isCurrProgress0 = oldProgress === 0;
         return (
-            isNewStatusInProgress &&
+            (isNewStatusInProgress || isNewStatusAssigned) &&
             !isCurrentTaskStatusBlock &&
             !isCurrProgress0
         );
