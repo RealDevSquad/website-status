@@ -122,7 +122,7 @@ describe('ExtensionStatusModal Component', () => {
     test('should test formatToRelativeTime function', () => {
         const timestamp = 1640995200;
         const result = formatToRelativeTime(timestamp);
-        expect(result).toBe('3 years ago');
+        expect(result).toBe('4 years ago');
     });
 
     test('should open extension request form when request extension button is clicked', () => {
