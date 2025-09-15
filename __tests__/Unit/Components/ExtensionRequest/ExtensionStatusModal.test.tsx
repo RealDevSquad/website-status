@@ -120,9 +120,11 @@ describe('ExtensionStatusModal Component', () => {
     });
 
     test('should test formatToRelativeTime function', () => {
+        jest.useFakeTimers().setSystemTime(new Date('2025-01-01T00:00:00Z'));
         const timestamp = 1640995200;
         const result = formatToRelativeTime(timestamp);
-        expect(result).toBe('4 years ago');
+        expect(result).toBe('3 years ago');
+        jest.useRealTimers();
     });
 
     test('should open extension request form when request extension button is clicked', () => {
