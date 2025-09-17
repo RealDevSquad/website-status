@@ -7,7 +7,8 @@ interface LOG_DATA {
     status: string;
     startTime: number;
     endTime: number;
-    taskTitle: string;
+    taskTitle?: string;
+    taskUrl?: string;
 }
 
 export const getStartOfDay = (date: Date): Date => {
@@ -22,13 +23,13 @@ export const getStartOfDay = (date: Date): Date => {
 
 export const getDatesInRange = (startDate: Date, endDate: Date) => {
     const date = getStartOfDay(startDate);
-    const dates = [];
+    const dates: number[] = [];
 
     if (
         !(startDate instanceof Date && !isNaN(startDate.getTime())) ||
         !(endDate instanceof Date && !isNaN(endDate.getTime()))
     )
-        return [];
+        return [] as number[];
 
     while (date <= getStartOfDay(endDate)) {
         dates.push(getStartOfDay(date).getTime());
@@ -41,16 +42,17 @@ export const getDatesInRange = (startDate: Date, endDate: Date) => {
 export const processData = (
     itemId: string | null,
     data: []
-): [object, object] => {
+): [object, object, object] => {
     if (!itemId) {
-        return [{}, {}];
+        return [{}, {}, {}];
     } else {
         const log: any = data.find((log: LOG_TYPE) => {
             return log.userId === itemId;
         });
-        if (!log || log.data?.length == 0) return [{}, {}];
+        if (!log || log.data?.length == 0) return [{}, {}, {}];
         const dictWithStatus: Record<number, string> = {};
         const dictWithTask: Record<number, string> = {};
+        const dictWithTaskUrl: Record<number, string> = {};
         log.data.forEach((logData: LOG_DATA) => {
             const dates = getDatesInRange(
                 new Date(logData.startTime),
@@ -58,7 +60,12 @@ export const processData = (
             );
             if (logData.status === 'ACTIVE') {
                 dates.forEach((dateTimestamp) => {
-                    dictWithTask[dateTimestamp] = logData.taskTitle;
+                    if (logData.taskTitle) {
+                        dictWithTask[dateTimestamp] = logData.taskTitle;
+                    }
+                    if (logData.taskUrl) {
+                        dictWithTaskUrl[dateTimestamp] = logData.taskUrl;
+                    }
                 });
             } else {
                 dates.forEach((dateTimestamp) => {
@@ -66,6 +73,6 @@ export const processData = (
                 });
             }
         });
-        return [dictWithStatus, dictWithTask];
+        return [dictWithStatus, dictWithTask, dictWithTaskUrl];
     }
 };

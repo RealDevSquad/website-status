@@ -19,7 +19,11 @@ const UserStatusCalendar: FC = () => {
 
     const setTileClassName = ({ activeStartDate, date, view }: any) => {
         if (date.getDay() === 0) return 'sunday';
-        return processedData[0] ? processedData[0][date.getTime()] : null;
+        const time = date.getTime();
+        // If there is a task on this date, mark as ACTIVE (green)
+        if (processedData[1] && processedData[1][time]) return 'ACTIVE';
+        // Otherwise fall back to status classes like OOO/IDLE
+        return processedData[0] ? processedData[0][time] : null;
     };
 
     const handleDayClick = (value: Date, event: any) => {
@@ -48,12 +52,15 @@ const UserStatusCalendar: FC = () => {
             return;
         }
         if (processedData[1] && processedData[1][value.getTime()]) {
+            const title = processedData[1][value.getTime()];
+            const url = processedData[2]
+                ? processedData[2][value.getTime()]
+                : undefined;
+            const linkText = url ? ` (Link: ${url})` : '';
             setMessage(
                 `${selectedUser.username} is ACTIVE on ${value.getDate()}-${
                     MONTHS[value.getMonth()]
-                }-${value.getFullYear()} having task with title - ${
-                    processedData[1][value.getTime()]
-                }`
+                }-${value.getFullYear()} having task with title - ${title}${linkText}`
             );
             return;
         }
