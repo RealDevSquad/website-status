@@ -1,13 +1,33 @@
 import { useState, useEffect, ChangeEvent, useRef } from 'react';
 import classNames from './UserSearchField.module.scss';
 import { useGetAllUsersQuery } from '@/app/services/usersApi';
-import { logs } from '@/constants/calendar';
+import { useLazyGetLogsQuery } from '@/app/services/logsApi';
 import { userDataType } from '@/interfaces/user.type';
 import { useOutsideAlerter } from '@/hooks/useOutsideAlerter';
 
+type LogEntry = {
+    type: string;
+    timestamp?: string | number;
+    from?: string | number;
+    until?: string | number;
+    taskTitle?: string;
+};
+
 type SearchFieldProps = {
-    onSearchTextSubmitted: (user: userDataType | undefined, data: any) => void;
+    onSearchTextSubmitted: (
+        user: userDataType | undefined,
+        data: CalendarData[]
+    ) => void;
     loading: boolean;
+};
+
+type CalendarData = {
+    userId: string;
+    data: {
+        startTime: number | undefined;
+        endTime: number | undefined;
+        status: string;
+    }[];
 };
 
 const SearchField = ({ onSearchTextSubmitted, loading }: SearchFieldProps) => {
@@ -22,19 +42,62 @@ const SearchField = ({ onSearchTextSubmitted, loading }: SearchFieldProps) => {
         filterUser(e.target.value);
     };
 
-    const handleOnSubmit = (e: React.FormEvent) => {
+    const toMs = (value?: number | string) => {
+        if (typeof value === 'string') {
+            const parsed = Date.parse(value);
+            return isNaN(parsed) ? undefined : parsed;
+        }
+        if (typeof value !== 'number') return undefined as unknown as number;
+        return value >= 1e12 ? value : value * 1000;
+    };
+
+    const [triggerGetLogs, { isFetching: isLogsFetching }] =
+        useLazyGetLogsQuery();
+
+    const handleOnSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setDisplayList([]);
         const user = usersList.find(
             (user: userDataType) => user.username === searchText
         );
-        onSearchTextSubmitted(user, data);
+
+        if (!user) {
+            onSearchTextSubmitted(undefined, []);
+            return;
+        }
+
+        // Fetch logs for OOO data only
+        const logsResult = await triggerGetLogs({
+            username: user.username || undefined,
+            type: 'REQUEST_CREATED',
+            format: 'feed',
+            dev: true,
+        });
+
+        const logsResponse = logsResult.data;
+
+        const oooEntries = (logsResponse?.data || [])
+            .filter((log: LogEntry) => log && log.type === 'REQUEST_CREATED')
+            .map((log: LogEntry) => ({
+                startTime: toMs(log.from),
+                endTime: toMs(log.until),
+                status: 'OOO',
+            }))
+            .filter((e) => e.startTime && e.endTime);
+
+        const mapped = [
+            {
+                userId: user.id,
+                data: oooEntries,
+            },
+        ];
+
+        onSearchTextSubmitted(user, mapped);
     };
 
-    const { data: userData, isError, isLoading } = useGetAllUsersQuery();
+    const { data: userData, isLoading } = useGetAllUsersQuery();
     const [usersList, setUsersList] = useState<userDataType[]>([]);
     const [displayList, setDisplayList] = useState<userDataType[]>([]);
-    const [data, setData] = useState([]);
 
     useEffect(() => {
         if (userData?.users) {
@@ -42,14 +105,6 @@ const SearchField = ({ onSearchTextSubmitted, loading }: SearchFieldProps) => {
             const filteredUsers: userDataType[] = users.filter(
                 (user: userDataType) => !user.incompleteUserDetails
             );
-            const logData: any = filteredUsers.map((user: userDataType) => {
-                const log = logs[Math.floor(Math.random() * 4)];
-                return {
-                    data: log,
-                    userId: user.id,
-                };
-            });
-            setData(logData);
             setUsersList(filteredUsers);
         }
     }, [isLoading, userData]);
@@ -112,7 +167,10 @@ const SearchField = ({ onSearchTextSubmitted, loading }: SearchFieldProps) => {
             <button
                 className={classNames.userSearchSubmitButton}
                 disabled={
-                    loading || !(searchText ?? '').trim() || !isValidUsername()
+                    loading ||
+                    isLogsFetching ||
+                    !(searchText ?? '').trim() ||
+                    !isValidUsername()
                 }
             >
                 Submit
