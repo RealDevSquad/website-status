@@ -41,7 +41,7 @@ describe('TaskStatusDropdown', () => {
         expect(msgTag).toBeInTheDocument();
         expect(msgTag).toHaveTextContent(msg);
     });
-    it('should display model informing user that proceeding further will make progress 0%, on task status change from needs review to in progress', () => {
+    it('should display model informing user that proceeding further will make progress 0%, on task status change from needs review to assigned', () => {
         const oldProgress = 100;
         const oldStatus = BACKEND_TASK_STATUS.NEEDS_REVIEW;
 
@@ -56,14 +56,14 @@ describe('TaskStatusDropdown', () => {
 
         const msg = `The progress of current task is ${oldProgress}%. ${MSG_ON_0_PROGRESS}`;
         fireEvent.change(screen.getByTestId('task-status'), {
-            target: { value: BACKEND_TASK_STATUS.IN_PROGRESS },
+            target: { value: BACKEND_TASK_STATUS.ASSIGNED },
         });
 
         const msgTag = screen.getByTestId('msg');
         expect(msgTag).toBeInTheDocument();
         expect(msgTag).toHaveTextContent(msg);
     });
-    it('should send changed status and progress if user click the proceed button of the model, on task status change from needs review to in progress', () => {
+    it('should send changed status and progress if user click the proceed button of the model, on task status change from needs review to assigned', () => {
         const oldProgress = 100;
         const oldStatus = BACKEND_TASK_STATUS.NEEDS_REVIEW;
 
@@ -77,16 +77,16 @@ describe('TaskStatusDropdown', () => {
         );
 
         fireEvent.change(screen.getByTestId('task-status'), {
-            target: { value: BACKEND_TASK_STATUS.IN_PROGRESS },
+            target: { value: BACKEND_TASK_STATUS.ASSIGNED },
         });
         fireEvent.click(screen.getByTestId('proceed'));
         expect(onChange).toHaveBeenCalledWith({
-            newStatus: BACKEND_TASK_STATUS.IN_PROGRESS,
+            newStatus: BACKEND_TASK_STATUS.ASSIGNED,
             newProgress: 0,
         });
         expect(onChange).toHaveBeenCalledTimes(1);
     });
-    it('should send reset status and progress if user click the cancel button of the model, on task status change from needs review to in progress', () => {
+    it('should send reset status and progress if user click the cancel button of the model, on task status change from needs review to assigned', () => {
         const oldProgress = 100;
         const oldStatus = BACKEND_TASK_STATUS.NEEDS_REVIEW;
 
@@ -100,7 +100,7 @@ describe('TaskStatusDropdown', () => {
         );
 
         fireEvent.change(screen.getByTestId('task-status'), {
-            target: { value: BACKEND_TASK_STATUS.IN_PROGRESS },
+            target: { value: BACKEND_TASK_STATUS.ASSIGNED },
         });
         fireEvent.click(screen.getByTestId('cancel'));
         expect(onChange).toHaveBeenCalledTimes(0);
