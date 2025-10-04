@@ -7,7 +7,7 @@ type LogsQueryParams = {
     dev?: boolean;
 };
 
-type LogEntry = {
+export type LogEntry = {
     type: string;
     timestamp?: string | number;
     from?: string | number;
@@ -15,7 +15,7 @@ type LogEntry = {
     taskTitle?: string;
 };
 
-type LogsResponse = {
+export type LogsResponse = {
     data: LogEntry[];
     message?: string;
 };

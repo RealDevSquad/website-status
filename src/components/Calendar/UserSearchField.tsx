@@ -1,7 +1,9 @@
 import { useState, useEffect, ChangeEvent, useRef } from 'react';
+import { useRouter } from 'next/router';
 import classNames from './UserSearchField.module.scss';
 import { useGetAllUsersQuery } from '@/app/services/usersApi';
 import { useLazyGetLogsQuery } from '@/app/services/logsApi';
+import { logs } from '@/constants/calendar';
 import { userDataType } from '@/interfaces/user.type';
 import { useOutsideAlerter } from '@/hooks/useOutsideAlerter';
 
@@ -31,6 +33,9 @@ type CalendarData = {
 };
 
 const SearchField = ({ onSearchTextSubmitted, loading }: SearchFieldProps) => {
+    const router = useRouter();
+    const isDevMode = router.query.dev === 'true';
+
     const handleOutsideClick = () => {
         setDisplayList([]);
     };
@@ -66,7 +71,15 @@ const SearchField = ({ onSearchTextSubmitted, loading }: SearchFieldProps) => {
             return;
         }
 
-        // Fetch logs for OOO data only
+        // Feature flag: Use different data sources based on dev mode
+        if (!isDevMode) {
+            // Non-dev mode: Use mock data from constants (original behavior)
+            const userData = data.find((item: any) => item.userId === user.id);
+            onSearchTextSubmitted(user, userData ? [userData] : []);
+            return;
+        }
+
+        // Dev mode: Fetch real OOO data from logs API
         const logsResult = await triggerGetLogs({
             username: user.username || undefined,
             type: 'REQUEST_CREATED',
@@ -95,9 +108,10 @@ const SearchField = ({ onSearchTextSubmitted, loading }: SearchFieldProps) => {
         onSearchTextSubmitted(user, mapped);
     };
 
-    const { data: userData, isLoading } = useGetAllUsersQuery();
+    const { data: userData, isError, isLoading } = useGetAllUsersQuery();
     const [usersList, setUsersList] = useState<userDataType[]>([]);
     const [displayList, setDisplayList] = useState<userDataType[]>([]);
+    const [data, setData] = useState([]);
 
     useEffect(() => {
         if (userData?.users) {
@@ -105,6 +119,14 @@ const SearchField = ({ onSearchTextSubmitted, loading }: SearchFieldProps) => {
             const filteredUsers: userDataType[] = users.filter(
                 (user: userDataType) => !user.incompleteUserDetails
             );
+            const logData: any = filteredUsers.map((user: userDataType) => {
+                const log = logs[Math.floor(Math.random() * 4)];
+                return {
+                    data: log,
+                    userId: user.id,
+                };
+            });
+            setData(logData);
             setUsersList(filteredUsers);
         }
     }, [isLoading, userData]);
@@ -167,10 +189,7 @@ const SearchField = ({ onSearchTextSubmitted, loading }: SearchFieldProps) => {
             <button
                 className={classNames.userSearchSubmitButton}
                 disabled={
-                    loading ||
-                    isLogsFetching ||
-                    !(searchText ?? '').trim() ||
-                    !isValidUsername()
+                    loading || !(searchText ?? '').trim() || !isValidUsername()
                 }
             >
                 Submit
