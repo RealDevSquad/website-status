@@ -4,7 +4,7 @@ import { useGetAllUsersQuery } from '@/app/services/usersApi';
 import { userDataType } from '@/interfaces/user.type';
 import { useOutsideAlerter } from '@/hooks/useOutsideAlerter';
 import { useLazyGetLogsQuery } from '@/app/services/logsApi';
-import { useLazyGetTasksByAssigneeQuery } from '@/app/services/tasksApi';
+import { useLazyGetAllTasksQuery } from '@/app/services/tasksApi';
 
 type SearchFieldProps = {
     onSearchTextSubmitted: (user: userDataType | undefined, data: any) => void;
@@ -30,7 +30,7 @@ const SearchField = ({ onSearchTextSubmitted, loading }: SearchFieldProps) => {
     const [triggerGetLogs, { isFetching: isLogsFetching }] =
         useLazyGetLogsQuery();
     const [triggerGetTasks, { isFetching: isTasksFetching }] =
-        useLazyGetTasksByAssigneeQuery();
+        useLazyGetAllTasksQuery();
 
     const toMs = (value?: number | string) => {
         if (typeof value === 'string') {

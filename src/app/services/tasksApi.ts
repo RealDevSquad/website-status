@@ -11,7 +11,6 @@ import { MINE_TASKS_URL, TASKS_URL } from '@/constants/url';
 import { TASK_RESULT_SIZE } from '@/constants/constants';
 
 type TasksQueryResponse = { message: string; tasks: task[] };
-
 type TasksCreateMutationResponse = { message: string; task: task };
 
 export const tasksApi = api.injectEndpoints({
@@ -62,22 +61,6 @@ export const tasksApi = api.injectEndpoints({
                     next: response.next,
                     prev: response.prev,
                 } as TasksResponseType;
-            },
-        }),
-
-        getTasksByAssignee: builder.query<
-            TasksQueryResponse,
-            { assignee: string; size?: number }
-        >({
-            query: ({ assignee, size = 100 }) => ({
-                url: `/tasks?size=${size}&dev=true&assignee=${assignee}`,
-            }),
-            providesTags: ['Tasks'],
-            transformResponse: (response: TasksResponseType) => {
-                return {
-                    message: response.message ?? '',
-                    tasks: response.tasks,
-                } as TasksQueryResponse;
             },
         }),
 
@@ -155,11 +138,11 @@ export const tasksApi = api.injectEndpoints({
 
 export const {
     useGetAllTasksQuery,
+    useLazyGetAllTasksQuery,
     useGetMineTasksQuery,
     useAddTaskMutation,
     useUpdateTaskMutation,
     useUpdateSelfTaskMutation,
     useGetSelfExtensionRequestsQuery,
     useCreateExtensionRequestMutation,
-    useLazyGetTasksByAssigneeQuery,
 } = tasksApi;
