@@ -6,16 +6,27 @@ import 'react-calendar/dist/Calendar.css';
 import { SearchField } from '@/components/Calendar/UserSearchField';
 import { processData } from '@/utils/userStatusCalendar';
 import { MONTHS } from '@/constants/calendar';
+import { useRouter } from 'next/router';
+import fetch from '@/helperFunctions/fetch';
+import { TASKS_URL } from '@/constants/url';
+import { useLazyGetLogsQuery } from '@/app/services/logsApi';
 
 const UserStatusCalendar: FC = () => {
+    const router = useRouter();
+    const dev = router?.query?.dev === 'true';
     const [selectedDate, onDateChange] = useState<Date>(new Date());
     const [selectedUser, setSelectedUser]: any = useState(null);
     const [processedData, setProcessedData] = useState<any>(
         processData(selectedUser ? selectedUser.id : null, [])
     );
 
+    const [issueLinkByDate, setIssueLinkByDate] = useState<
+        Record<number, string>
+    >({});
+
     const [message, setMessage]: any = useState(null);
     const [loading, setLoading]: any = useState(false);
+    const [triggerGetLogs] = useLazyGetLogsQuery();
 
     const setTileClassName = ({ activeStartDate, date, view }: any) => {
         if (date.getDay() === 0) return 'sunday';
@@ -48,12 +59,25 @@ const UserStatusCalendar: FC = () => {
             return;
         }
         if (processedData[1] && processedData[1][value.getTime()]) {
+            const ts = value.getTime();
+            const title = processedData[1][ts];
+            const link = issueLinkByDate[ts];
             setMessage(
-                `${selectedUser.username} is ACTIVE on ${value.getDate()}-${
-                    MONTHS[value.getMonth()]
-                }-${value.getFullYear()} having task with title - ${
-                    processedData[1][value.getTime()]
-                }`
+                <span>
+                    {`${
+                        selectedUser.username
+                    } is ACTIVE on ${value.getDate()}-${
+                        MONTHS[value.getMonth()]
+                    }-${value.getFullYear()} having task with title - ${title}`}
+                    {link ? (
+                        <>
+                            <br />
+                            <a href={link} target="_blank" rel="noreferrer">
+                                Open GitHub issue ↗
+                            </a>
+                        </>
+                    ) : null}
+                </span>
             );
             return;
         }
@@ -67,18 +91,139 @@ const UserStatusCalendar: FC = () => {
         );
     };
 
+    // Using bottom message only; no custom tile tooltip
+
+    const toMs = (value: any): number => {
+        const num = Number(value);
+        if (!num) return 0;
+        return num < 1e12 ? num * 1000 : num; // normalize seconds to ms
+    };
+
+    const onSubmitDevFlow = async (user: any) => {
+        // Fetch task logs and build calendar maps for the selected user
+        try {
+            // Fetch pages until we either find logs for the username or exhaust pages (cap pages to avoid long loops)
+            const pageSize = 100;
+            let pageData = await triggerGetLogs({
+                dev: true,
+                type: 'task',
+                size: pageSize,
+            }).unwrap();
+            let aggregated: any[] = pageData?.data || pageData?.logs || [];
+            let nextPath: string | null = pageData?.next || null;
+            let pageCount = 0;
+
+            const username = user?.username;
+            let userLogs = aggregated.filter(
+                (l: any) => l?.meta?.username === username
+            );
+
+            while (!userLogs.length && nextPath && pageCount < 5) {
+                pageData = await triggerGetLogs({ next: nextPath }).unwrap();
+                const pageLogs = pageData?.data || pageData?.logs || [];
+                aggregated = aggregated.concat(pageLogs);
+                userLogs = aggregated.filter(
+                    (l: any) => l?.meta?.username === username
+                );
+                nextPath = pageData?.next || null;
+                pageCount += 1;
+            }
+
+            if (!userLogs.length) {
+                setProcessedData([{}, {}]);
+                setMessage(`No logs found for ${user?.username}`);
+                return;
+            }
+            const uniqueTaskIds: string[] = Array.from(
+                new Set(
+                    userLogs.map((l: any) => l?.meta?.taskId).filter(Boolean)
+                )
+            );
+
+            const classByDate: Record<number, string> = {};
+            const titleByDate: Record<number, string> = {};
+            const linkByDate: Record<number, string> = {};
+
+            // Fetch details for each taskId to get ranges and links
+            const detailPromises = uniqueTaskIds.map(async (taskId) => {
+                const { requestPromise: taskPromise } = fetch({
+                    url: `${TASKS_URL}/${taskId}/details`,
+                });
+                const taskRes = await taskPromise;
+                const taskData = taskRes?.data?.taskData || {};
+                const startedOn = toMs(taskData?.startedOn);
+                const endsOn = toMs(taskData?.endsOn);
+                const title = taskData?.title || '';
+                const issueUrl = taskData?.github?.issue?.html_url || '';
+
+                if (!startedOn || !endsOn) return; // fallback handled below from logs
+
+                // Expand range day-by-day
+                const start = new Date(startedOn);
+                const end = new Date(endsOn);
+                const cursor = new Date(
+                    start.getFullYear(),
+                    start.getMonth(),
+                    start.getDate()
+                );
+                const endDay = new Date(
+                    end.getFullYear(),
+                    end.getMonth(),
+                    end.getDate()
+                );
+                while (cursor.getTime() <= endDay.getTime()) {
+                    const ts = cursor.getTime();
+                    classByDate[ts] = 'ACTIVE';
+                    titleByDate[ts] = title;
+                    if (issueUrl) linkByDate[ts] = issueUrl;
+                    cursor.setDate(cursor.getDate() + 1);
+                }
+            });
+
+            await Promise.allSettled(detailPromises);
+
+            // Fallback: if no date ranges were set from task details, mark days from logs' timestamps
+            if (!Object.keys(classByDate).length) {
+                userLogs.forEach((l: any) => {
+                    const tsMs = toMs(l?.timestamp?._seconds);
+                    if (!tsMs) return;
+                    const d = new Date(tsMs);
+                    const dayTs = new Date(
+                        d.getFullYear(),
+                        d.getMonth(),
+                        d.getDate()
+                    ).getTime();
+                    classByDate[dayTs] = 'ACTIVE';
+                    const tId = l?.meta?.taskId || '';
+                    titleByDate[dayTs] = tId;
+                    // No tooltip map needed
+                });
+            }
+
+            setProcessedData([classByDate, titleByDate]);
+            setIssueLinkByDate(linkByDate);
+            setMessage(null);
+        } catch (e) {
+            // Fail silently in dev flow; keep existing state
+        }
+    };
+
     return (
         <Layout>
             <Head title="Calendar | Status Real Dev Squad" />
 
             <div className="container calendar-container">
                 <SearchField
-                    onSearchTextSubmitted={(user, data) => {
+                    onSearchTextSubmitted={async (user, data) => {
                         setSelectedUser(user);
-                        setProcessedData(
-                            processData(user ? user.id : null, data)
-                        );
-                        setMessage(null);
+                        if (dev) {
+                            await onSubmitDevFlow(user);
+                        } else {
+                            setProcessedData(
+                                processData(user ? user.id : null, data)
+                            );
+                            setMessage(null);
+                        }
                     }}
                     loading={loading}
                 />
