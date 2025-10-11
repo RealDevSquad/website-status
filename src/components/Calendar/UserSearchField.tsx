@@ -1,5 +1,4 @@
 import { useState, useEffect, ChangeEvent, useRef } from 'react';
-import { useRouter } from 'next/router';
 import classNames from './UserSearchField.module.scss';
 import { useGetAllUsersQuery } from '@/app/services/usersApi';
 import { logs } from '@/constants/calendar';
@@ -12,8 +11,6 @@ type SearchFieldProps = {
 };
 
 const SearchField = ({ onSearchTextSubmitted, loading }: SearchFieldProps) => {
-    const router = useRouter();
-    const dev = router?.query?.dev === 'true';
     const handleOutsideClick = () => {
         setDisplayList([]);
     };

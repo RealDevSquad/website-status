@@ -91,25 +91,23 @@ const UserStatusCalendar: FC = () => {
         );
     };
 
-    // Using bottom message only; no custom tile tooltip
-
     const toMs = (value: any): number => {
         const num = Number(value);
         if (!num) return 0;
-        return num < 1e12 ? num * 1000 : num; // normalize seconds to ms
+        return num < 1e12 ? num * 1000 : num;
     };
 
     const onSubmitDevFlow = async (user: any) => {
-        // Fetch task logs and build calendar maps for the selected user
+        setLoading(true);
+
         try {
-            // Fetch pages until we either find logs for the username or exhaust pages (cap pages to avoid long loops)
             const pageSize = 100;
             let pageData = await triggerGetLogs({
                 dev: true,
                 type: 'task',
                 size: pageSize,
             }).unwrap();
-            let aggregated: any[] = pageData?.data || pageData?.logs || [];
+            let aggregated: any[] = pageData?.data || [];
             let nextPath: string | null = pageData?.next || null;
             let pageCount = 0;
 
@@ -120,7 +118,7 @@ const UserStatusCalendar: FC = () => {
 
             while (!userLogs.length && nextPath && pageCount < 5) {
                 pageData = await triggerGetLogs({ next: nextPath }).unwrap();
-                const pageLogs = pageData?.data || pageData?.logs || [];
+                const pageLogs = pageData?.data || [];
                 aggregated = aggregated.concat(pageLogs);
                 userLogs = aggregated.filter(
                     (l: any) => l?.meta?.username === username
@@ -143,8 +141,6 @@ const UserStatusCalendar: FC = () => {
             const classByDate: Record<number, string> = {};
             const titleByDate: Record<number, string> = {};
             const linkByDate: Record<number, string> = {};
-
-            // Fetch details for each taskId to get ranges and links
             const detailPromises = uniqueTaskIds.map(async (taskId) => {
                 const { requestPromise: taskPromise } = fetch({
                     url: `${TASKS_URL}/${taskId}/details`,
@@ -156,9 +152,8 @@ const UserStatusCalendar: FC = () => {
                 const title = taskData?.title || '';
                 const issueUrl = taskData?.github?.issue?.html_url || '';
 
-                if (!startedOn || !endsOn) return; // fallback handled below from logs
+                if (!startedOn || !endsOn) return;
 
-                // Expand range day-by-day
                 const start = new Date(startedOn);
                 const end = new Date(endsOn);
                 const cursor = new Date(
@@ -182,7 +177,6 @@ const UserStatusCalendar: FC = () => {
 
             await Promise.allSettled(detailPromises);
 
-            // Fallback: if no date ranges were set from task details, mark days from logs' timestamps
             if (!Object.keys(classByDate).length) {
                 userLogs.forEach((l: any) => {
                     const tsMs = toMs(l?.timestamp?._seconds);
@@ -196,7 +190,6 @@ const UserStatusCalendar: FC = () => {
                     classByDate[dayTs] = 'ACTIVE';
                     const tId = l?.meta?.taskId || '';
                     titleByDate[dayTs] = tId;
-                    // No tooltip map needed
                 });
             }
 
@@ -204,7 +197,9 @@ const UserStatusCalendar: FC = () => {
             setIssueLinkByDate(linkByDate);
             setMessage(null);
         } catch (e) {
-            // Fail silently in dev flow; keep existing state
+            setMessage('Unable to fetch logs right now.');
+        } finally {
+            setLoading(false);
         }
     };
 

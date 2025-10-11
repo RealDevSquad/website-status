@@ -1,9 +1,20 @@
 import { api } from './api';
 
+export type LogEntry = {
+    user: string;
+    taskId: string;
+    taskTitle: string;
+    type: string;
+    userId: string;
+    username: string;
+    subType: string;
+    status: string;
+    timestamp: number;
+};
+
 type LogsResponse = {
     message?: string;
-    data?: any[];
-    logs?: any[];
+    data?: LogEntry[];
     next?: string | null;
     prev?: string | null;
 };
@@ -14,8 +25,8 @@ type GetLogsParams = {
     format?: string;
     page?: number;
     size?: number;
-    next?: string; // full path like /logs?... from backend
-    prev?: string; // full path like /logs?... from backend
+    next?: string;
+    prev?: string;
 };
 
 export const logsApi = api.injectEndpoints({
@@ -29,7 +40,7 @@ export const logsApi = api.injectEndpoints({
                     return { url: params.prev };
                 }
                 const {
-                    dev = true,
+                    dev = false,
                     type = 'task',
                     format,
                     page,
