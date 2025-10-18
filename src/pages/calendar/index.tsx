@@ -9,63 +9,16 @@ import { MONTHS } from '@/constants/calendar';
 import { useRouter } from 'next/router';
 import fetch from '@/helperFunctions/fetch';
 import { TASKS_URL } from '@/constants/url';
-import { useLazyGetLogsQuery } from '@/app/services/logsApi';
-
-interface ApiLogEntry {
-    type: string;
-    timestamp: {
-        _seconds: number;
-        _nanoseconds: number;
-    };
-    meta: {
-        userId: string;
-        taskId: string;
-        username: string;
-    };
-    body: {
-        subType: string;
-        new: Record<string, unknown>;
-    };
-}
-
-interface User {
-    id: string;
-    username: string;
-}
-
-interface SearchFieldUser {
-    id?: string;
-    username?: string;
-}
-
-interface CalendarTileProps {
-    activeStartDate: Date;
-    date: Date;
-    view: string;
-}
-
-interface CalendarClickEvent {
-    currentTarget: HTMLElement;
-}
-
-type ProcessedData = [Record<number, string>, Record<number, string>];
-
-interface TaskDetails {
-    startedOn?: number;
-    endsOn?: number;
-    title?: string;
-    github?: {
-        issue?: {
-            html_url?: string;
-        };
-    };
-}
-
-interface TaskDetailsResponse {
-    data?: {
-        taskData?: TaskDetails;
-    };
-}
+import {
+    useLazyGetLogsQuery,
+    ApiLogEntry,
+    User,
+    SearchFieldUser,
+    CalendarTileProps,
+    CalendarClickEvent,
+    ProcessedData,
+    TaskDetailsResponse,
+} from '@/app/services/logsApi';
 
 const UserStatusCalendar: FC = () => {
     const router = useRouter();
@@ -161,7 +114,6 @@ const UserStatusCalendar: FC = () => {
         return num < 1e12 ? num * 1000 : num;
     };
 
-    // Extract pagination logic for fetching user logs
     const fetchUserLogs = async (username: string): Promise<ApiLogEntry[]> => {
         const pageSize = 100;
         let pageData = await triggerGetLogs({
@@ -199,7 +151,6 @@ const UserStatusCalendar: FC = () => {
         return userLogs;
     };
 
-    // Extract task processing logic
     const processTaskDetails = async (userLogs: ApiLogEntry[]) => {
         const uniqueTaskIds: string[] = Array.from(
             new Set(
@@ -252,7 +203,6 @@ const UserStatusCalendar: FC = () => {
         return { classByDate, titleByDate, linkByDate };
     };
 
-    // Extract fallback log processing
     const processFallbackLogs = (userLogs: ApiLogEntry[]) => {
         const classByDate: Record<number, string> = {};
         const titleByDate: Record<number, string> = {};
@@ -278,7 +228,6 @@ const UserStatusCalendar: FC = () => {
         setLoading(true);
 
         try {
-            // Step 1: Fetch user logs with pagination
             const userLogs = await fetchUserLogs(user?.username);
 
             if (!userLogs.length) {
@@ -287,11 +236,9 @@ const UserStatusCalendar: FC = () => {
                 return;
             }
 
-            // Step 2: Process task details to get calendar data
             const { classByDate, titleByDate, linkByDate } =
                 await processTaskDetails(userLogs);
 
-            // Step 3: Use fallback processing if no task details found
             let finalClassByDate = classByDate;
             let finalTitleByDate = titleByDate;
             const finalLinkByDate = linkByDate;
@@ -302,7 +249,6 @@ const UserStatusCalendar: FC = () => {
                 finalTitleByDate = fallbackData.titleByDate;
             }
 
-            // Step 4: Update UI with processed data
             setProcessedData([
                 finalClassByDate,
                 finalTitleByDate,
