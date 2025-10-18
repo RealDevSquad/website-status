@@ -11,43 +11,93 @@ import fetch from '@/helperFunctions/fetch';
 import { TASKS_URL } from '@/constants/url';
 import { useLazyGetLogsQuery } from '@/app/services/logsApi';
 
-interface TaskLog {
-    user: string;
-    taskId: string;
-    taskTitle: string;
+interface ApiLogEntry {
     type: string;
-    userId: string;
+    timestamp: {
+        _seconds: number;
+        _nanoseconds: number;
+    };
+    meta: {
+        userId: string;
+        taskId: string;
+        username: string;
+    };
+    body: {
+        subType: string;
+        new: Record<string, unknown>;
+    };
+}
+
+interface User {
+    id: string;
     username: string;
-    subType: string;
-    status?: string;
-    percentCompleted?: number;
+}
+
+interface SearchFieldUser {
+    id?: string;
+    username?: string;
+}
+
+interface CalendarTileProps {
+    activeStartDate: Date;
+    date: Date;
+    view: string;
+}
+
+interface CalendarClickEvent {
+    currentTarget: HTMLElement;
+}
+
+type ProcessedData = [Record<number, string>, Record<number, string>];
+
+interface TaskDetails {
+    startedOn?: number;
     endsOn?: number;
-    timestamp: number;
+    title?: string;
+    github?: {
+        issue?: {
+            html_url?: string;
+        };
+    };
+}
+
+interface TaskDetailsResponse {
+    data?: {
+        taskData?: TaskDetails;
+    };
 }
 
 const UserStatusCalendar: FC = () => {
     const router = useRouter();
     const dev = router?.query?.dev === 'true';
     const [selectedDate, onDateChange] = useState<Date>(new Date());
-    const [selectedUser, setSelectedUser]: any = useState(null);
-    const [processedData, setProcessedData] = useState<any>(
-        processData(selectedUser ? selectedUser.id : null, [])
+
+    const handleDateChange = (value: any) => {
+        if (value instanceof Date) {
+            onDateChange(value);
+        }
+    };
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [processedData, setProcessedData] = useState<ProcessedData>(
+        processData(selectedUser ? selectedUser.id : null, []) as ProcessedData
     );
 
     const [issueLinkByDate, setIssueLinkByDate] = useState<
         Record<number, string>
     >({});
 
-    const [message, setMessage]: any = useState(null);
-    const [loading, setLoading]: any = useState(false);
+    const [message, setMessage] = useState<string | JSX.Element | null>(null);
+    const [loading, setLoading] = useState<boolean>(false);
     const [triggerGetLogs] = useLazyGetLogsQuery();
 
-    const setTileClassName = ({ activeStartDate, date, view }: any) => {
+    const setTileClassName = ({ date }: CalendarTileProps) => {
         if (date.getDay() === 0) return 'sunday';
         return processedData[0] ? processedData[0][date.getTime()] : null;
     };
 
-    const handleDayClick = (value: Date, event: any) => {
+    const handleDayClick = (value: Date, event: CalendarClickEvent) => {
+        if (!selectedUser) return;
+
         if (value.getDay() === 0) {
             setMessage(
                 `${value.getDate()}-${
@@ -112,7 +162,7 @@ const UserStatusCalendar: FC = () => {
     };
 
     // Extract pagination logic for fetching user logs
-    const fetchUserLogs = async (username: string) => {
+    const fetchUserLogs = async (username: string): Promise<ApiLogEntry[]> => {
         const pageSize = 100;
         let pageData = await triggerGetLogs({
             dev: true,
@@ -120,21 +170,22 @@ const UserStatusCalendar: FC = () => {
             size: pageSize,
         }).unwrap();
 
-        let aggregated: TaskLog[] = pageData?.data || [];
+        let aggregated: ApiLogEntry[] = (pageData?.data ||
+            []) as unknown as ApiLogEntry[];
         let nextPath: string | null = pageData?.next || null;
         let pageCount = 0;
 
         let userLogs = aggregated.filter(
-            (l: any) => l?.meta?.username === username
+            (l: ApiLogEntry) => l?.meta?.username === username
         );
 
         while (!userLogs.length && nextPath && pageCount < 5) {
             pageData = await triggerGetLogs({ next: nextPath }).unwrap();
-            const pageLogs = pageData?.data || [];
+            const pageLogs = (pageData?.data || []) as unknown as ApiLogEntry[];
             aggregated = aggregated.concat(pageLogs);
 
             const pageUserLogs = pageLogs.filter(
-                (l: any) => l?.meta?.username === username
+                (l: ApiLogEntry) => l?.meta?.username === username
             );
             if (pageUserLogs.length) {
                 userLogs = pageUserLogs;
@@ -149,9 +200,13 @@ const UserStatusCalendar: FC = () => {
     };
 
     // Extract task processing logic
-    const processTaskDetails = async (userLogs: any[]) => {
+    const processTaskDetails = async (userLogs: ApiLogEntry[]) => {
         const uniqueTaskIds: string[] = Array.from(
-            new Set(userLogs.map((l: any) => l?.meta?.taskId).filter(Boolean))
+            new Set(
+                userLogs
+                    .map((l: ApiLogEntry) => l?.meta?.taskId)
+                    .filter(Boolean)
+            )
         );
 
         const classByDate: Record<number, string> = {};
@@ -162,10 +217,10 @@ const UserStatusCalendar: FC = () => {
             const { requestPromise: taskPromise } = fetch({
                 url: `${TASKS_URL}/${taskId}/details`,
             });
-            const taskRes = await taskPromise;
+            const taskRes = (await taskPromise) as TaskDetailsResponse;
             const taskData = taskRes?.data?.taskData || {};
-            const startedOn = toMs(taskData?.startedOn);
-            const endsOn = toMs(taskData?.endsOn);
+            const startedOn = toMs(taskData?.startedOn || 0);
+            const endsOn = toMs(taskData?.endsOn || 0);
             const title = taskData?.title || '';
             const issueUrl = taskData?.github?.issue?.html_url || '';
 
@@ -198,12 +253,12 @@ const UserStatusCalendar: FC = () => {
     };
 
     // Extract fallback log processing
-    const processFallbackLogs = (userLogs: TaskLog[]) => {
+    const processFallbackLogs = (userLogs: ApiLogEntry[]) => {
         const classByDate: Record<number, string> = {};
         const titleByDate: Record<number, string> = {};
 
-        userLogs.forEach((l: TaskLog) => {
-            const tsMs = toMs(l?.timestamp);
+        userLogs.forEach((l: ApiLogEntry) => {
+            const tsMs = toMs(l?.timestamp._seconds);
             if (!tsMs) return;
             const d = new Date(tsMs);
             const dayTs = new Date(
@@ -212,14 +267,14 @@ const UserStatusCalendar: FC = () => {
                 d.getDate()
             ).getTime();
             classByDate[dayTs] = 'ACTIVE';
-            const tId = l?.taskId || '';
+            const tId = l?.meta?.taskId || '';
             titleByDate[dayTs] = tId;
         });
 
         return { classByDate, titleByDate };
     };
 
-    const onSubmitDevFlow = async (user: any) => {
+    const onSubmitDevFlow = async (user: User) => {
         setLoading(true);
 
         try {
@@ -227,7 +282,7 @@ const UserStatusCalendar: FC = () => {
             const userLogs = await fetchUserLogs(user?.username);
 
             if (!userLogs.length) {
-                setProcessedData([{}, {}]);
+                setProcessedData([{}, {}] as ProcessedData);
                 setMessage(`No logs found for ${user?.username}`);
                 return;
             }
@@ -248,7 +303,10 @@ const UserStatusCalendar: FC = () => {
             }
 
             // Step 4: Update UI with processed data
-            setProcessedData([finalClassByDate, finalTitleByDate]);
+            setProcessedData([
+                finalClassByDate,
+                finalTitleByDate,
+            ] as ProcessedData);
             setIssueLinkByDate(finalLinkByDate);
             setMessage(null);
         } catch (e) {
@@ -258,29 +316,39 @@ const UserStatusCalendar: FC = () => {
         }
     };
 
+    const handleSearchSubmit = async (
+        user: SearchFieldUser | undefined,
+        data: unknown
+    ) => {
+        if (!user || !user.username) return;
+        const userObj: User = {
+            id: user.id || '',
+            username: user.username,
+        };
+        setSelectedUser(userObj);
+        if (dev) {
+            await onSubmitDevFlow(userObj);
+        } else {
+            setProcessedData(
+                processData(user?.id || null, data as []) as ProcessedData
+            );
+            setMessage(null);
+        }
+    };
+
     return (
         <Layout>
             <Head title="Calendar | Status Real Dev Squad" />
 
             <div className="container calendar-container">
                 <SearchField
-                    onSearchTextSubmitted={async (user, data) => {
-                        setSelectedUser(user);
-                        if (dev) {
-                            await onSubmitDevFlow(user);
-                        } else {
-                            setProcessedData(
-                                processData(user ? user.id : null, data)
-                            );
-                            setMessage(null);
-                        }
-                    }}
+                    onSearchTextSubmitted={handleSearchSubmit}
                     loading={loading}
                 />
                 {selectedUser && (
                     <div className="calendar" data-testid="react-calendar">
                         <Calendar
-                            onChange={onDateChange as any}
+                            onChange={handleDateChange}
                             className="calendar-div"
                             value={selectedDate}
                             onClickDay={handleDayClick}
