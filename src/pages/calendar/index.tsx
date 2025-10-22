@@ -22,26 +22,24 @@ import {
 
 const UserStatusCalendar: FC = () => {
     const router = useRouter();
+    const [triggerGetLogs] = useLazyGetLogsQuery();
     const dev = router?.query?.dev === 'true';
     const [selectedDate, onDateChange] = useState<Date>(new Date());
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [processedData, setProcessedData] = useState<ProcessedData>(
+        processData(selectedUser ? selectedUser.id : null, []) as ProcessedData
+    );
+    const [issueLinkByDate, setIssueLinkByDate] = useState<
+        Record<number, string>
+    >({});
+    const [message, setMessage] = useState<string | JSX.Element | null>(null);
+    const [loading, setLoading] = useState<boolean>(false);
 
     const handleDateChange = (value: any) => {
         if (value instanceof Date) {
             onDateChange(value);
         }
     };
-    const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    const [processedData, setProcessedData] = useState<ProcessedData>(
-        processData(selectedUser ? selectedUser.id : null, []) as ProcessedData
-    );
-
-    const [issueLinkByDate, setIssueLinkByDate] = useState<
-        Record<number, string>
-    >({});
-
-    const [message, setMessage] = useState<string | JSX.Element | null>(null);
-    const [loading, setLoading] = useState<boolean>(false);
-    const [triggerGetLogs] = useLazyGetLogsQuery();
 
     const setTileClassName = ({ date }: CalendarTileProps) => {
         if (date.getDay() === 0) return 'sunday';
@@ -203,65 +201,6 @@ const UserStatusCalendar: FC = () => {
         return { classByDate, titleByDate, linkByDate };
     };
 
-    const processFallbackLogs = (userLogs: ApiLogEntry[]) => {
-        const classByDate: Record<number, string> = {};
-        const titleByDate: Record<number, string> = {};
-
-        userLogs.forEach((l: ApiLogEntry) => {
-            const tsMs = toMs(l?.timestamp._seconds);
-            if (!tsMs) return;
-            const d = new Date(tsMs);
-            const dayTs = new Date(
-                d.getFullYear(),
-                d.getMonth(),
-                d.getDate()
-            ).getTime();
-            classByDate[dayTs] = 'ACTIVE';
-            const tId = l?.meta?.taskId || '';
-            titleByDate[dayTs] = tId;
-        });
-
-        return { classByDate, titleByDate };
-    };
-
-    const onSubmitDevFlow = async (user: User) => {
-        setLoading(true);
-
-        try {
-            const userLogs = await fetchUserLogs(user?.username);
-
-            if (!userLogs.length) {
-                setProcessedData([{}, {}] as ProcessedData);
-                setMessage(`No logs found for ${user?.username}`);
-                return;
-            }
-
-            const { classByDate, titleByDate, linkByDate } =
-                await processTaskDetails(userLogs);
-
-            let finalClassByDate = classByDate;
-            let finalTitleByDate = titleByDate;
-            const finalLinkByDate = linkByDate;
-
-            if (!Object.keys(classByDate).length) {
-                const fallbackData = processFallbackLogs(userLogs);
-                finalClassByDate = fallbackData.classByDate;
-                finalTitleByDate = fallbackData.titleByDate;
-            }
-
-            setProcessedData([
-                finalClassByDate,
-                finalTitleByDate,
-            ] as ProcessedData);
-            setIssueLinkByDate(finalLinkByDate);
-            setMessage(null);
-        } catch (e) {
-            setMessage('Unable to fetch logs right now.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const handleSearchSubmit = async (
         user: SearchFieldUser | undefined,
         data: unknown
@@ -272,8 +211,29 @@ const UserStatusCalendar: FC = () => {
             username: user.username,
         };
         setSelectedUser(userObj);
+
         if (dev) {
-            await onSubmitDevFlow(userObj);
+            setLoading(true);
+            try {
+                const userLogs = await fetchUserLogs(user?.username);
+
+                if (!userLogs.length) {
+                    setProcessedData([{}, {}] as ProcessedData);
+                    setMessage(`No logs found for ${user?.username}`);
+                    return;
+                }
+
+                const { classByDate, titleByDate, linkByDate } =
+                    await processTaskDetails(userLogs);
+
+                setProcessedData([classByDate, titleByDate] as ProcessedData);
+                setIssueLinkByDate(linkByDate);
+                setMessage(null);
+            } catch (e) {
+                setMessage('Unable to fetch logs right now.');
+            } finally {
+                setLoading(false);
+            }
         } else {
             setProcessedData(
                 processData(user?.id || null, data as []) as ProcessedData
