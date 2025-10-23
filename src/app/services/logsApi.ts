@@ -1,6 +1,6 @@
 import { api } from './api';
 
-export type LogEntry = {
+export type TLogEntry = {
     user: string;
     taskId: string;
     taskTitle: string;
@@ -12,7 +12,7 @@ export type LogEntry = {
     timestamp: number;
 };
 
-export interface ApiLogEntry {
+export interface TApiLogEntry {
     type: string;
     timestamp: {
         _seconds: number;
@@ -29,29 +29,29 @@ export interface ApiLogEntry {
     };
 }
 
-export interface User {
+export interface TUser {
     id: string;
     username: string;
 }
 
-export interface SearchFieldUser {
+export interface TSearchFieldUser {
     id?: string;
     username?: string;
 }
 
-export interface CalendarTileProps {
+export interface TCalendarTileProps {
     activeStartDate: Date;
     date: Date;
     view: string;
 }
 
-export interface CalendarClickEvent {
+export interface TCalendarClickEvent {
     currentTarget: HTMLElement;
 }
 
-export type ProcessedData = [Record<number, string>, Record<number, string>];
+export type TProcessedData = [Record<number, string>, Record<number, string>];
 
-export interface TaskDetails {
+export interface TTaskDetails {
     startedOn?: number;
     endsOn?: number;
     title?: string;
@@ -62,20 +62,20 @@ export interface TaskDetails {
     };
 }
 
-export interface TaskDetailsResponse {
+export interface TTaskDetailsResponse {
     data?: {
-        taskData?: TaskDetails;
+        taskData?: TTaskDetails;
     };
 }
 
-type LogsResponse = {
+type TLogsResponse = {
     message?: string;
-    data?: LogEntry[];
+    data?: TLogEntry[];
     next?: string | null;
     prev?: string | null;
 };
 
-type GetLogsParams = {
+type TGetLogsParams = {
     dev?: boolean;
     type?: string;
     format?: string;
@@ -87,7 +87,7 @@ type GetLogsParams = {
 
 export const logsApi = api.injectEndpoints({
     endpoints: (builder) => ({
-        getLogs: builder.query<LogsResponse, GetLogsParams | void>({
+        getLogs: builder.query<TLogsResponse, TGetLogsParams | void>({
             query: (params) => {
                 if (params?.next) {
                     return { url: params.next };

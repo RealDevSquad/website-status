@@ -23,3 +23,9 @@ export const getDateRelativeToToday = (
         );
     }
 };
+
+export const toMs = (value: number): number => {
+    const num = Number(value);
+    if (!num) return 0;
+    return num < 1e12 ? num * 1000 : num;
+};

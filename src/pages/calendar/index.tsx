@@ -8,16 +8,17 @@ import { processData } from '@/utils/userStatusCalendar';
 import { MONTHS } from '@/constants/calendar';
 import { useRouter } from 'next/router';
 import fetch from '@/helperFunctions/fetch';
+import { toMs } from '@/utils/time';
 import { TASKS_URL } from '@/constants/url';
 import {
     useLazyGetLogsQuery,
-    ApiLogEntry,
-    User,
-    SearchFieldUser,
-    CalendarTileProps,
-    CalendarClickEvent,
-    ProcessedData,
-    TaskDetailsResponse,
+    TApiLogEntry,
+    TUser,
+    TSearchFieldUser,
+    TCalendarTileProps,
+    TCalendarClickEvent,
+    TProcessedData,
+    TTaskDetailsResponse,
 } from '@/app/services/logsApi';
 
 const UserStatusCalendar: FC = () => {
@@ -25,9 +26,9 @@ const UserStatusCalendar: FC = () => {
     const [triggerGetLogs] = useLazyGetLogsQuery();
     const dev = router?.query?.dev === 'true';
     const [selectedDate, onDateChange] = useState<Date>(new Date());
-    const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    const [processedData, setProcessedData] = useState<ProcessedData>(
-        processData(selectedUser ? selectedUser.id : null, []) as ProcessedData
+    const [selectedUser, setSelectedUser] = useState<TUser | null>(null);
+    const [processedData, setProcessedData] = useState<TProcessedData>(
+        processData(selectedUser ? selectedUser.id : null, []) as TProcessedData
     );
     const [issueLinkByDate, setIssueLinkByDate] = useState<
         Record<number, string>
@@ -41,12 +42,12 @@ const UserStatusCalendar: FC = () => {
         }
     };
 
-    const setTileClassName = ({ date }: CalendarTileProps) => {
+    const setTileClassName = ({ date }: TCalendarTileProps) => {
         if (date.getDay() === 0) return 'sunday';
         return processedData[0] ? processedData[0][date.getTime()] : null;
     };
 
-    const handleDayClick = (value: Date, event: CalendarClickEvent) => {
+    const handleDayClick = (value: Date, event: TCalendarClickEvent) => {
         if (!selectedUser) return;
 
         if (value.getDay() === 0) {
@@ -106,13 +107,7 @@ const UserStatusCalendar: FC = () => {
         );
     };
 
-    const toMs = (value: number): number => {
-        const num = Number(value);
-        if (!num) return 0;
-        return num < 1e12 ? num * 1000 : num;
-    };
-
-    const fetchUserLogs = async (username: string): Promise<ApiLogEntry[]> => {
+    const fetchUserLogs = async (username: string): Promise<TApiLogEntry[]> => {
         const pageSize = 100;
         let pageData = await triggerGetLogs({
             dev: true,
@@ -120,22 +115,23 @@ const UserStatusCalendar: FC = () => {
             size: pageSize,
         }).unwrap();
 
-        let aggregated: ApiLogEntry[] = (pageData?.data ||
-            []) as unknown as ApiLogEntry[];
+        let aggregated: TApiLogEntry[] = (pageData?.data ||
+            []) as unknown as TApiLogEntry[];
         let nextPath: string | null = pageData?.next || null;
         let pageCount = 0;
 
         let userLogs = aggregated.filter(
-            (l: ApiLogEntry) => l?.meta?.username === username
+            (l: TApiLogEntry) => l?.meta?.username === username
         );
 
         while (!userLogs.length && nextPath && pageCount < 5) {
             pageData = await triggerGetLogs({ next: nextPath }).unwrap();
-            const pageLogs = (pageData?.data || []) as unknown as ApiLogEntry[];
+            const pageLogs = (pageData?.data ||
+                []) as unknown as TApiLogEntry[];
             aggregated = aggregated.concat(pageLogs);
 
             const pageUserLogs = pageLogs.filter(
-                (l: ApiLogEntry) => l?.meta?.username === username
+                (l: TApiLogEntry) => l?.meta?.username === username
             );
             if (pageUserLogs.length) {
                 userLogs = pageUserLogs;
@@ -149,11 +145,11 @@ const UserStatusCalendar: FC = () => {
         return userLogs;
     };
 
-    const processTaskDetails = async (userLogs: ApiLogEntry[]) => {
+    const processTaskDetails = async (userLogs: TApiLogEntry[]) => {
         const uniqueTaskIds: string[] = Array.from(
             new Set(
                 userLogs
-                    .map((l: ApiLogEntry) => l?.meta?.taskId)
+                    .map((l: TApiLogEntry) => l?.meta?.taskId)
                     .filter(Boolean)
             )
         );
@@ -166,7 +162,7 @@ const UserStatusCalendar: FC = () => {
             const { requestPromise: taskPromise } = fetch({
                 url: `${TASKS_URL}/${taskId}/details`,
             });
-            const taskRes = (await taskPromise) as TaskDetailsResponse;
+            const taskRes = (await taskPromise) as TTaskDetailsResponse;
             const taskData = taskRes?.data?.taskData || {};
             const startedOn = toMs(taskData?.startedOn || 0);
             const endsOn = toMs(taskData?.endsOn || 0);
@@ -202,11 +198,11 @@ const UserStatusCalendar: FC = () => {
     };
 
     const handleSearchSubmit = async (
-        user: SearchFieldUser | undefined,
+        user: TSearchFieldUser | undefined,
         data: unknown
     ) => {
         if (!user || !user.username) return;
-        const userObj: User = {
+        const userObj: TUser = {
             id: user.id || '',
             username: user.username,
         };
@@ -218,7 +214,7 @@ const UserStatusCalendar: FC = () => {
                 const userLogs = await fetchUserLogs(user?.username);
 
                 if (!userLogs.length) {
-                    setProcessedData([{}, {}] as ProcessedData);
+                    setProcessedData([{}, {}] as TProcessedData);
                     setMessage(`No logs found for ${user?.username}`);
                     return;
                 }
@@ -226,7 +222,7 @@ const UserStatusCalendar: FC = () => {
                 const { classByDate, titleByDate, linkByDate } =
                     await processTaskDetails(userLogs);
 
-                setProcessedData([classByDate, titleByDate] as ProcessedData);
+                setProcessedData([classByDate, titleByDate] as TProcessedData);
                 setIssueLinkByDate(linkByDate);
                 setMessage(null);
             } catch (e) {
@@ -236,7 +232,7 @@ const UserStatusCalendar: FC = () => {
             }
         } else {
             setProcessedData(
-                processData(user?.id || null, data as []) as ProcessedData
+                processData(user?.id || null, data as []) as TProcessedData
             );
             setMessage(null);
         }
