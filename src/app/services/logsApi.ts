@@ -1,6 +1,6 @@
 import { api } from './api';
 
-export type TLogEntry = {
+export interface TLogEntry {
     user: string;
     taskId: string;
     taskTitle: string;
@@ -10,23 +10,9 @@ export type TLogEntry = {
     subType: string;
     status: string;
     timestamp: number;
-};
-
-export interface TApiLogEntry {
-    type: string;
-    timestamp: {
-        _seconds: number;
-        _nanoseconds: number;
-    };
-    meta: {
-        userId: string;
-        taskId: string;
-        username: string;
-    };
-    body: {
-        subType: string;
-        new: Record<string, unknown>;
-    };
+    percentCompleted?: number;
+    endsOn?: number;
+    extensionRequestId?: string;
 }
 
 export interface TUser {
@@ -51,23 +37,6 @@ export interface TCalendarClickEvent {
 
 export type TProcessedData = [Record<number, string>, Record<number, string>];
 
-export interface TTaskDetails {
-    startedOn?: number;
-    endsOn?: number;
-    title?: string;
-    github?: {
-        issue?: {
-            html_url?: string;
-        };
-    };
-}
-
-export interface TTaskDetailsResponse {
-    data?: {
-        taskData?: TTaskDetails;
-    };
-}
-
 type TLogsResponse = {
     message?: string;
     data?: TLogEntry[];
@@ -79,32 +48,29 @@ type TGetLogsParams = {
     dev?: boolean;
     type?: string;
     format?: string;
-    page?: number;
     size?: number;
     next?: string;
     prev?: string;
+    username?: string;
 };
 
 export const logsApi = api.injectEndpoints({
     endpoints: (builder) => ({
         getLogs: builder.query<TLogsResponse, TGetLogsParams | void>({
             query: (params) => {
-                if (params?.next) {
-                    return { url: params.next };
-                }
-                if (params?.prev) {
-                    return { url: params.prev };
-                }
+                if (params?.next) return { url: params.next };
+                if (params?.prev) return { url: params.prev };
+
                 const {
                     dev = false,
                     type = 'task',
                     format,
-                    page,
                     size,
+                    username,
                 } = params || {};
                 return {
                     url: '/logs',
-                    params: { dev, type, format, page, size },
+                    params: { dev, type, format, size, username },
                 };
             },
             providesTags: [],

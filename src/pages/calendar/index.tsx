@@ -7,223 +7,148 @@ import { SearchField } from '@/components/Calendar/UserSearchField';
 import { processData } from '@/utils/userStatusCalendar';
 import { MONTHS } from '@/constants/calendar';
 import { useRouter } from 'next/router';
-import fetch from '@/helperFunctions/fetch';
-import { toMs } from '@/utils/time';
-import { TASKS_URL } from '@/constants/url';
 import {
     useLazyGetLogsQuery,
-    TApiLogEntry,
+    TLogEntry,
     TUser,
     TSearchFieldUser,
     TCalendarTileProps,
     TCalendarClickEvent,
     TProcessedData,
-    TTaskDetailsResponse,
 } from '@/app/services/logsApi';
 
 const UserStatusCalendar: FC = () => {
     const router = useRouter();
     const [triggerGetLogs] = useLazyGetLogsQuery();
     const dev = router?.query?.dev === 'true';
+
     const [selectedDate, onDateChange] = useState<Date>(new Date());
     const [selectedUser, setSelectedUser] = useState<TUser | null>(null);
-    const [processedData, setProcessedData] = useState<TProcessedData>(
-        processData(selectedUser ? selectedUser.id : null, []) as TProcessedData
-    );
-    const [issueLinkByDate, setIssueLinkByDate] = useState<
-        Record<number, string>
-    >({});
+    const [processedData, setProcessedData] = useState<TProcessedData>([
+        {},
+        {},
+    ]);
     const [message, setMessage] = useState<string | JSX.Element | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
 
     const handleDateChange = (value: any) => {
-        if (value instanceof Date) {
-            onDateChange(value);
-        }
+        if (value instanceof Date) onDateChange(value);
     };
 
     const setTileClassName = ({ date }: TCalendarTileProps) => {
         if (date.getDay() === 0) return 'sunday';
-        return processedData[0] ? processedData[0][date.getTime()] : null;
+        return processedData[0]?.[date.getTime()] || null;
     };
 
     const handleDayClick = (value: Date, event: TCalendarClickEvent) => {
         if (!selectedUser) return;
 
+        const dateStr = `${value.getDate()}-${
+            MONTHS[value.getMonth()]
+        }-${value.getFullYear()}`;
+
         if (value.getDay() === 0) {
-            setMessage(
-                `${value.getDate()}-${
-                    MONTHS[value.getMonth()]
-                }-${value.getFullYear()} is HOLIDAY(SUNDAY)!`
-            );
+            setMessage(`${dateStr} is HOLIDAY(SUNDAY)!`);
             return;
         }
+
         if (event.currentTarget.classList.contains('OOO')) {
-            setMessage(
-                `${selectedUser.username} is OOO on ${value.getDate()}-${
-                    MONTHS[value.getMonth()]
-                }-${value.getFullYear()}`
-            );
+            setMessage(`${selectedUser.username} is OOO on ${dateStr}`);
             return;
         }
+
         if (event.currentTarget.classList.contains('IDLE')) {
-            setMessage(
-                `${selectedUser.username} is IDLE on ${value.getDate()}-${
-                    MONTHS[value.getMonth()]
-                }-${value.getFullYear()}`
-            );
+            setMessage(`${selectedUser.username} is IDLE on ${dateStr}`);
             return;
         }
-        if (processedData[1] && processedData[1][value.getTime()]) {
-            const ts = value.getTime();
-            const title = processedData[1][ts];
-            const link = issueLinkByDate[ts];
+
+        if (processedData[1]?.[value.getTime()]) {
+            const title = processedData[1][value.getTime()];
             setMessage(
                 <span>
-                    {`${
-                        selectedUser.username
-                    } is ACTIVE on ${value.getDate()}-${
-                        MONTHS[value.getMonth()]
-                    }-${value.getFullYear()} having task with title - ${title}`}
-                    {link ? (
-                        <>
-                            <br />
-                            <a href={link} target="_blank" rel="noreferrer">
-                                Open GitHub issue ↗
-                            </a>
-                        </>
-                    ) : null}
+                    {`${selectedUser.username} is ACTIVE on ${dateStr} having task with title - ${title}`}
                 </span>
             );
             return;
         }
 
         setMessage(
-            `No user status found for ${
-                selectedUser.username
-            } on ${value.getDate()}-${
-                MONTHS[value.getMonth()]
-            }-${value.getFullYear()}!`
+            `No user status found for ${selectedUser.username} on ${dateStr}!`
         );
     };
 
-    const fetchUserLogs = async (username: string): Promise<TApiLogEntry[]> => {
-        const pageSize = 100;
-        let pageData = await triggerGetLogs({
+    const fetchUserLogs = async (username: string): Promise<TLogEntry[]> => {
+        const pageData = await triggerGetLogs({
             dev: true,
-            type: 'task',
-            size: pageSize,
+            type: 'task,extensionRequests,taskRequests,REQUEST_CREATED',
+            format: 'feed',
+            username: username,
+            size: 100,
         }).unwrap();
-
-        let aggregated: TApiLogEntry[] = (pageData?.data ||
-            []) as unknown as TApiLogEntry[];
-        let nextPath: string | null = pageData?.next || null;
-        let pageCount = 0;
-
-        let userLogs = aggregated.filter(
-            (l: TApiLogEntry) => l?.meta?.username === username
-        );
-
-        while (!userLogs.length && nextPath && pageCount < 5) {
-            pageData = await triggerGetLogs({ next: nextPath }).unwrap();
-            const pageLogs = (pageData?.data ||
-                []) as unknown as TApiLogEntry[];
-            aggregated = aggregated.concat(pageLogs);
-
-            const pageUserLogs = pageLogs.filter(
-                (l: TApiLogEntry) => l?.meta?.username === username
-            );
-            if (pageUserLogs.length) {
-                userLogs = pageUserLogs;
-                break;
-            }
-
-            nextPath = pageData?.next || null;
-            pageCount += 1;
-        }
-
-        return userLogs;
+        return pageData?.data || [];
     };
 
-    const processTaskDetails = async (userLogs: TApiLogEntry[]) => {
-        const uniqueTaskIds: string[] = Array.from(
-            new Set(
-                userLogs
-                    .map((l: TApiLogEntry) => l?.meta?.taskId)
-                    .filter(Boolean)
-            )
-        );
-
+    const processTaskDetails = (userLogs: TLogEntry[]) => {
         const classByDate: Record<number, string> = {};
         const titleByDate: Record<number, string> = {};
-        const linkByDate: Record<number, string> = {};
 
-        const detailPromises = uniqueTaskIds.map(async (taskId) => {
-            const { requestPromise: taskPromise } = fetch({
-                url: `${TASKS_URL}/${taskId}/details`,
-            });
-            const taskRes = (await taskPromise) as TTaskDetailsResponse;
-            const taskData = taskRes?.data?.taskData || {};
-            const startedOn = toMs(taskData?.startedOn || 0);
-            const endsOn = toMs(taskData?.endsOn || 0);
-            const title = taskData?.title || '';
-            const issueUrl = taskData?.github?.issue?.html_url || '';
+        userLogs.forEach((log: TLogEntry) => {
+            if (log.type === 'task' && log.taskId && log.taskTitle) {
+                const timestamp = log.timestamp * 1000;
+                const logDate = new Date(timestamp);
 
-            if (!startedOn || !endsOn) return;
+                if (!isNaN(logDate.getTime())) {
+                    const ts = new Date(
+                        logDate.getFullYear(),
+                        logDate.getMonth(),
+                        logDate.getDate()
+                    ).getTime();
 
-            const start = new Date(startedOn);
-            const end = new Date(endsOn);
-            const cursor = new Date(
-                start.getFullYear(),
-                start.getMonth(),
-                start.getDate()
-            );
-            const endDay = new Date(
-                end.getFullYear(),
-                end.getMonth(),
-                end.getDate()
-            );
+                    classByDate[ts] = 'ACTIVE';
+                    titleByDate[ts] = log.taskTitle;
 
-            while (cursor.getTime() <= endDay.getTime()) {
-                const ts = cursor.getTime();
-                classByDate[ts] = 'ACTIVE';
-                titleByDate[ts] = title;
-                if (issueUrl) linkByDate[ts] = issueUrl;
-                cursor.setDate(cursor.getDate() + 1);
+                    if (log.endsOn) {
+                        const endDate = new Date(log.endsOn * 1000);
+                        const cursor = new Date(ts);
+                        const endDay = new Date(
+                            endDate.getFullYear(),
+                            endDate.getMonth(),
+                            endDate.getDate()
+                        );
+
+                        while (cursor.getTime() <= endDay.getTime()) {
+                            classByDate[cursor.getTime()] = 'ACTIVE';
+                            titleByDate[cursor.getTime()] = log.taskTitle;
+                            cursor.setDate(cursor.getDate() + 1);
+                        }
+                    }
+                }
             }
         });
 
-        await Promise.allSettled(detailPromises);
-        return { classByDate, titleByDate, linkByDate };
+        return { classByDate, titleByDate };
     };
 
     const handleSearchSubmit = async (
         user: TSearchFieldUser | undefined,
         data: unknown
     ) => {
-        if (!user || !user.username) return;
-        const userObj: TUser = {
-            id: user.id || '',
-            username: user.username,
-        };
-        setSelectedUser(userObj);
+        if (!user?.username) return;
+
+        setSelectedUser({ id: user.id || '', username: user.username });
 
         if (dev) {
             setLoading(true);
             try {
-                const userLogs = await fetchUserLogs(user?.username);
-
+                const userLogs = await fetchUserLogs(user.username);
                 if (!userLogs.length) {
-                    setProcessedData([{}, {}] as TProcessedData);
-                    setMessage(`No logs found for ${user?.username}`);
+                    setProcessedData([{}, {}]);
+                    setMessage(`No logs found for ${user.username}`);
                     return;
                 }
-
-                const { classByDate, titleByDate, linkByDate } =
-                    await processTaskDetails(userLogs);
-
-                setProcessedData([classByDate, titleByDate] as TProcessedData);
-                setIssueLinkByDate(linkByDate);
+                const { classByDate, titleByDate } =
+                    processTaskDetails(userLogs);
+                setProcessedData([classByDate, titleByDate]);
                 setMessage(null);
             } catch (e) {
                 setMessage('Unable to fetch logs right now.');
@@ -232,7 +157,7 @@ const UserStatusCalendar: FC = () => {
             }
         } else {
             setProcessedData(
-                processData(user?.id || null, data as []) as TProcessedData
+                processData(user.id || null, data as []) as TProcessedData
             );
             setMessage(null);
         }
@@ -241,7 +166,6 @@ const UserStatusCalendar: FC = () => {
     return (
         <Layout>
             <Head title="Calendar | Status Real Dev Squad" />
-
             <div className="container calendar-container">
                 <SearchField
                     onSearchTextSubmitted={handleSearchSubmit}
