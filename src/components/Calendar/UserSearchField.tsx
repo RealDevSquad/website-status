@@ -22,11 +22,6 @@ const SearchField = ({ onSearchTextSubmitted, loading }: SearchFieldProps) => {
         filterUser(e.target.value);
     };
 
-    const { data: userData, isLoading } = useGetAllUsersQuery();
-    const [usersList, setUsersList] = useState<userDataType[]>([]);
-    const [displayList, setDisplayList] = useState<userDataType[]>([]);
-    const [data, setData] = useState([]);
-
     const handleOnSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setDisplayList([]);
@@ -35,6 +30,11 @@ const SearchField = ({ onSearchTextSubmitted, loading }: SearchFieldProps) => {
         );
         onSearchTextSubmitted(user, data);
     };
+
+    const { data: userData, isLoading } = useGetAllUsersQuery();
+    const [usersList, setUsersList] = useState<userDataType[]>([]);
+    const [displayList, setDisplayList] = useState<userDataType[]>([]);
+    const [data, setData] = useState([]);
 
     useEffect(() => {
         if (userData?.users) {
