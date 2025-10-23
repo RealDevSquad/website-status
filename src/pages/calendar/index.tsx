@@ -7,6 +7,7 @@ import { SearchField } from '@/components/Calendar/UserSearchField';
 import { processData } from '@/utils/userStatusCalendar';
 import { MONTHS } from '@/constants/calendar';
 import { useRouter } from 'next/router';
+import getDateInString from '@/helperFunctions/getDateInString';
 import {
     useLazyGetLogsQuery,
     TLogEntry,
@@ -28,9 +29,21 @@ const UserStatusCalendar: FC = () => {
         {},
         {},
     ]);
+    const [taskDataByDate, setTaskDataByDate] = useState<
+        Record<
+            number,
+            {
+                taskId: string;
+                taskTitle: string;
+                startedOn: number;
+                endsOn?: number;
+            }
+        >
+    >({});
     const [message, setMessage] = useState<string | JSX.Element | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleDateChange = (value: any) => {
         if (value instanceof Date) onDateChange(value);
     };
@@ -63,12 +76,44 @@ const UserStatusCalendar: FC = () => {
         }
 
         if (processedData[1]?.[value.getTime()]) {
-            const title = processedData[1][value.getTime()];
-            setMessage(
-                <span>
-                    {`${selectedUser.username} is ACTIVE on ${dateStr} having task with title - ${title}`}
-                </span>
-            );
+            const taskData = taskDataByDate[value.getTime()];
+            if (taskData) {
+                const startDate = getDateInString(new Date(taskData.startedOn));
+                const endDate = taskData.endsOn
+                    ? getDateInString(new Date(taskData.endsOn * 1000))
+                    : 'Not specified';
+                const taskLink = `https://status.realdevsquad.com/tasks/${taskData.taskId}`;
+
+                setMessage(
+                    <div>
+                        <p>
+                            {`${selectedUser.username} is ACTIVE on ${dateStr}`}
+                        </p>
+                        <ul>
+                            <li>Task: {taskData.taskTitle}</li>
+                            <li>Start Date: {startDate}</li>
+                            <li>End Date: {endDate}</li>
+                            <li>
+                                Link:{' '}
+                                <a
+                                    href={taskLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    {taskLink}
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                );
+            } else {
+                const title = processedData[1][value.getTime()];
+                setMessage(
+                    <span>
+                        {`${selectedUser.username} is ACTIVE on ${dateStr} having task with title - ${title}`}
+                    </span>
+                );
+            }
             return;
         }
 
@@ -91,6 +136,15 @@ const UserStatusCalendar: FC = () => {
     const processTaskDetails = (userLogs: TLogEntry[]) => {
         const classByDate: Record<number, string> = {};
         const titleByDate: Record<number, string> = {};
+        const taskDataByDate: Record<
+            number,
+            {
+                taskId: string;
+                taskTitle: string;
+                startedOn: number;
+                endsOn?: number;
+            }
+        > = {};
 
         userLogs.forEach((log: TLogEntry) => {
             if (log.type === 'task' && log.taskId && log.taskTitle) {
@@ -106,6 +160,12 @@ const UserStatusCalendar: FC = () => {
 
                     classByDate[ts] = 'ACTIVE';
                     titleByDate[ts] = log.taskTitle;
+                    taskDataByDate[ts] = {
+                        taskId: log.taskId,
+                        taskTitle: log.taskTitle,
+                        startedOn: timestamp,
+                        endsOn: log.endsOn,
+                    };
 
                     if (log.endsOn) {
                         const endDate = new Date(log.endsOn * 1000);
@@ -119,6 +179,12 @@ const UserStatusCalendar: FC = () => {
                         while (cursor.getTime() <= endDay.getTime()) {
                             classByDate[cursor.getTime()] = 'ACTIVE';
                             titleByDate[cursor.getTime()] = log.taskTitle;
+                            taskDataByDate[cursor.getTime()] = {
+                                taskId: log.taskId,
+                                taskTitle: log.taskTitle,
+                                startedOn: timestamp,
+                                endsOn: log.endsOn,
+                            };
                             cursor.setDate(cursor.getDate() + 1);
                         }
                     }
@@ -126,7 +192,7 @@ const UserStatusCalendar: FC = () => {
             }
         });
 
-        return { classByDate, titleByDate };
+        return { classByDate, titleByDate, taskDataByDate };
     };
 
     const handleSearchSubmit = async (
@@ -146,9 +212,10 @@ const UserStatusCalendar: FC = () => {
                     setMessage(`No logs found for ${user.username}`);
                     return;
                 }
-                const { classByDate, titleByDate } =
+                const { classByDate, titleByDate, taskDataByDate } =
                     processTaskDetails(userLogs);
                 setProcessedData([classByDate, titleByDate]);
+                setTaskDataByDate(taskDataByDate);
                 setMessage(null);
             } catch (e) {
                 setMessage('Unable to fetch logs right now.');

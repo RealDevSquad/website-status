@@ -11,6 +11,7 @@ import {
 import { NextRouter } from 'next/router';
 import * as tasksApi from '@/app/services/tasksApi';
 import { CONTENT } from '../../../../__mocks__/db/tasks';
+import moment from 'moment';
 import {
     APPROVED,
     ASSIGNED,
@@ -537,6 +538,9 @@ describe('Task card', () => {
     });
 
     it('renders "Started" with a specific date if status is not AVAILABLE', () => {
+        const originalFromNow = moment.prototype.fromNow;
+        moment.prototype.fromNow = jest.fn(() => '4 years ago');
+
         const { getByTestId } = renderWithRouter(
             <Provider store={store()}>
                 <Card
@@ -548,7 +552,8 @@ describe('Task card', () => {
             {}
         );
         const spanElement = screen.getByTestId('started-on');
-        expect(spanElement).toHaveTextContent('Started 4 years ago'); // Mocked date from moment
+        expect(spanElement).toHaveTextContent('Started 4 years ago');
+        moment.prototype.fromNow = originalFromNow;
     });
     it('Should show the status of the task', () => {
         renderWithRouter(

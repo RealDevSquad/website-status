@@ -37,17 +37,56 @@
 
 .messageDiv {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     margin-top: 10px;
-    padding: 20px;
-    width: 350px;
+    padding: 24px;
+    width: 500px;
     max-width: 90%;
-    background-color: #e5e7eb;
-    color: #000000;
-    border-radius: 10px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    color: #212529;
+    border-radius: 12px;
     text-align: center;
     position: relative;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 1px solid #dee2e6;
+
+    p {
+        margin: 0 0 16px 0;
+        font-weight: 600;
+        font-size: 16px;
+        color: #495057;
+    }
+
+    ul {
+        text-align: left;
+        margin: 0;
+        padding-left: 24px;
+        line-height: 1.6;
+
+        li {
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #495057;
+
+            &:last-child {
+                margin-bottom: 0;
+            }
+        }
+    }
+
+    a {
+        color: #0d6efd;
+        text-decoration: none;
+        font-weight: 500;
+        border-bottom: 1px solid transparent;
+        transition: all 0.2s ease;
+
+        &:hover {
+            color: #0a58ca;
+            border-bottom-color: #0a58ca;
+        }
+    }
 }
 
 .messageDiv:before {
