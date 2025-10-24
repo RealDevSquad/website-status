@@ -1,3 +1,5 @@
+@import '../styles/variables.scss';
+
 .react-calendar .OOO {
     background: #000000;
     color: #ffffff;
@@ -14,8 +16,8 @@
 }
 
 .react-calendar .ACTIVE {
-    background: #90ee90;
-    color: #000000;
+    background: $active-green;
+    color: $black;
     font-weight: bold;
 }
 
@@ -52,22 +54,22 @@
     border: 1px solid #dee2e6;
 
     p {
-        margin: 0 0 16px 0;
+        margin: 0 0 1rem 0;
         font-weight: 600;
-        font-size: 16px;
-        color: #495057;
+        font-size: 1rem;
+        color: $gray;
     }
 
     ul {
         text-align: left;
         margin: 0;
-        padding-left: 24px;
+        padding-left: 1.5rem;
         line-height: 1.6;
 
         li {
-            margin-bottom: 8px;
-            font-size: 14px;
-            color: #495057;
+            margin-bottom: 0.5rem;
+            font-size: 0.88rem;
+            color: $gray;
 
             &:last-child {
                 margin-bottom: 0;
@@ -76,15 +78,15 @@
     }
 
     a {
-        color: #0d6efd;
+        color: $bright-blue;
         text-decoration: none;
         font-weight: 500;
         border-bottom: 1px solid transparent;
         transition: all 0.2s ease;
 
         &:hover {
-            color: #0a58ca;
-            border-bottom-color: #0a58ca;
+            color: $royal-blue;
+            border-bottom-color: $royal-blue;
         }
     }
 }
@@ -92,10 +94,10 @@
 .messageDiv:before {
     content: '';
     position: absolute;
-    top: -9px;
-    left: calc(50% - 5px);
+    top: -0.56rem;
+    left: calc(50% - 0.31rem);
     width: 0;
-    border-bottom: 10px solid #e5e7eb;
-    border-left: 10px solid transparent;
-    border-right: 10px solid transparent;
+    border-bottom: 0.63rem solid $lighter-gray;
+    border-left: 0.63rem solid transparent;
+    border-right: 0.63rem solid transparent;
 }
