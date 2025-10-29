@@ -23,6 +23,7 @@ import {
     NEEDS_REVIEW,
     VERIFIED,
 } from '@/constants/task-status';
+import moment from 'moment';
 
 const DEFAULT_PROPS = {
     content: {
@@ -537,6 +538,9 @@ describe('Task card', () => {
     });
 
     it('renders "Started" with a specific date if status is not AVAILABLE', () => {
+        const originalFromNow = moment.prototype.fromNow;
+        moment.prototype.fromNow = jest.fn(() => '4 years ago');
+
         const { getByTestId } = renderWithRouter(
             <Provider store={store()}>
                 <Card
@@ -548,7 +552,8 @@ describe('Task card', () => {
             {}
         );
         const spanElement = screen.getByTestId('started-on');
-        expect(spanElement).toHaveTextContent('Started 4 years ago'); // Mocked date from moment
+        expect(spanElement).toHaveTextContent('Started 4 years ago');
+        moment.prototype.fromNow = originalFromNow;
     });
     it('Should show the status of the task', () => {
         renderWithRouter(

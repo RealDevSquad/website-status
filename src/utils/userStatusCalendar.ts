@@ -89,7 +89,6 @@ export const processData = (
         const dictWithTask: Record<number, string> = {};
         const dictWithOOOEntries: Record<number, OOOEntry[]> = {};
 
-        // Process mock data if available
         if (log && log.data?.length > 0) {
             log.data.forEach((logData: LOG_DATA) => {
                 const dates = getDatesInRange(
@@ -108,12 +107,10 @@ export const processData = (
             });
         }
 
-        // Process OOO logs data if available
         if (oooLogsData && oooLogsData.length > 0) {
             const [oooEntries] = processOOOLogsData(oooLogsData);
             Object.assign(dictWithOOOEntries, oooEntries);
 
-            // Also add "OOO" status to dictWithStatus for proper tile styling
             Object.keys(oooEntries).forEach((dateTimestamp) => {
                 dictWithStatus[parseInt(dateTimestamp)] = 'OOO';
             });

@@ -29,7 +29,7 @@ export const logsApi = api.injectEndpoints({
         getLogsByUsername: build.query<LogsResponse, LogsQueryArgs>({
             query: ({
                 username,
-                dev = true,
+                dev = false,
                 format = 'feed',
                 type = 'REQUEST_CREATED',
             }) =>

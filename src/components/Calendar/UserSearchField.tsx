@@ -43,7 +43,6 @@ const SearchField = ({
             (user: userDataType) => user.username === searchText
         );
         setSelectedUser(user || null);
-        // Reset the tracking ref when submitting a new user
         lastProcessedUsername.current = null;
         onSearchTextSubmitted(user, data);
     };
@@ -53,7 +52,6 @@ const SearchField = ({
     const [displayList, setDisplayList] = useState<userDataType[]>([]);
     const [data, setData] = useState([]);
 
-    // Fetch OOO logs data when dev=true and user is selected
     const { data: logsData } = useGetLogsByUsernameQuery(
         { username: selectedUser?.username || '' },
         { skip: !dev || !selectedUser?.username }
@@ -77,7 +75,6 @@ const SearchField = ({
         }
     }, [isLoading, userData]);
 
-    // Update parent component when logs data changes - only once per user
     useEffect(() => {
         if (
             dev &&
