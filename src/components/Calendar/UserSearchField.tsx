@@ -1,22 +1,36 @@
 import { useState, useEffect, ChangeEvent, useRef } from 'react';
 import classNames from './UserSearchField.module.scss';
 import { useGetAllUsersQuery } from '@/app/services/usersApi';
+import { useGetLogsByUsernameQuery } from '@/app/services/logsApi';
 import { logs } from '@/constants/calendar';
 import { userDataType } from '@/interfaces/user.type';
 import { useOutsideAlerter } from '@/hooks/useOutsideAlerter';
+import { LogEntry } from '@/app/services/logsApi';
 
 type SearchFieldProps = {
-    onSearchTextSubmitted: (user: userDataType | undefined, data: any) => void;
+    onSearchTextSubmitted: (
+        user: userDataType | undefined,
+        data: any,
+        oooLogsData?: LogEntry[]
+    ) => void;
     loading: boolean;
+    dev?: boolean;
 };
 
-const SearchField = ({ onSearchTextSubmitted, loading }: SearchFieldProps) => {
+const SearchField = ({
+    onSearchTextSubmitted,
+    loading,
+    dev = false,
+}: SearchFieldProps) => {
     const handleOutsideClick = () => {
         setDisplayList([]);
     };
     const suggestionInputRef = useRef(null);
     useOutsideAlerter(suggestionInputRef, handleOutsideClick);
     const [searchText, setSearchText] = useState<string>('');
+    const [selectedUser, setSelectedUser] = useState<userDataType | null>(null);
+    const lastProcessedUsername = useRef<string | null>(null);
+
     const onSearchTextChanged = (e: ChangeEvent<HTMLInputElement>) => {
         setSearchText(e.target.value);
         filterUser(e.target.value);
@@ -28,6 +42,9 @@ const SearchField = ({ onSearchTextSubmitted, loading }: SearchFieldProps) => {
         const user = usersList.find(
             (user: userDataType) => user.username === searchText
         );
+        setSelectedUser(user || null);
+        // Reset the tracking ref when submitting a new user
+        lastProcessedUsername.current = null;
         onSearchTextSubmitted(user, data);
     };
 
@@ -35,6 +52,12 @@ const SearchField = ({ onSearchTextSubmitted, loading }: SearchFieldProps) => {
     const [usersList, setUsersList] = useState<userDataType[]>([]);
     const [displayList, setDisplayList] = useState<userDataType[]>([]);
     const [data, setData] = useState([]);
+
+    // Fetch OOO logs data when dev=true and user is selected
+    const { data: logsData } = useGetLogsByUsernameQuery(
+        { username: selectedUser?.username || '' },
+        { skip: !dev || !selectedUser?.username }
+    );
 
     useEffect(() => {
         if (userData?.users) {
@@ -53,6 +76,19 @@ const SearchField = ({ onSearchTextSubmitted, loading }: SearchFieldProps) => {
             setUsersList(filteredUsers);
         }
     }, [isLoading, userData]);
+
+    // Update parent component when logs data changes - only once per user
+    useEffect(() => {
+        if (
+            dev &&
+            logsData?.data &&
+            selectedUser &&
+            lastProcessedUsername.current !== selectedUser.username
+        ) {
+            lastProcessedUsername.current = selectedUser.username || null;
+            onSearchTextSubmitted(selectedUser, data, logsData.data);
+        }
+    }, [dev, logsData, selectedUser]);
 
     const isValidUsername = () => {
         const usernames = usersList.map((user: userDataType) => user.username);

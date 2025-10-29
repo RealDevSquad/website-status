@@ -34,3 +34,4 @@ export const DASHBOARD_URL = 'https://dashboard.realdevsquad.com';
 export const USER_MANAGEMENT_URL = `${DASHBOARD_URL}/users/details/`;
 export const TASK_REQUESTS_DETAILS_URL = `${DASHBOARD_URL}/task-requests/details/`;
 export const TASK_EXTENSION_REQUEST_URL = `${DASHBOARD_URL}/extension-requests/`;
+export const OOO_REQUEST_DETAILS_URL = `${DASHBOARD_URL}/requests/`;
