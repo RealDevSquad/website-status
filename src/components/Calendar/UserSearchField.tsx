@@ -1,4 +1,4 @@
-import { useState, useEffect, ChangeEvent, useRef } from 'react';
+import { useState, useEffect, ChangeEvent, useRef, useMemo } from 'react';
 import classNames from './UserSearchField.module.scss';
 import { useGetAllUsersQuery } from '@/app/services/usersApi';
 import { useGetLogsByUsernameQuery } from '@/app/services/logsApi';
@@ -52,10 +52,16 @@ const SearchField = ({
     const [displayList, setDisplayList] = useState<userDataType[]>([]);
     const [data, setData] = useState([]);
 
-    const { data: logsData } = useGetLogsByUsernameQuery(
-        { username: selectedUser?.username || '' },
-        { skip: !dev || !selectedUser?.username }
+    const queryParams = useMemo(
+        () => ({
+            username: selectedUser?.username || '',
+        }),
+        [selectedUser?.username]
     );
+
+    const { data: logsData } = useGetLogsByUsernameQuery(queryParams, {
+        skip: !dev || !selectedUser?.username,
+    });
 
     useEffect(() => {
         if (userData?.users) {
@@ -85,7 +91,7 @@ const SearchField = ({
             lastProcessedUsername.current = selectedUser.username || null;
             onSearchTextSubmitted(selectedUser, data, logsData.data);
         }
-    }, [dev, logsData, selectedUser]);
+    }, [dev, logsData, selectedUser, data]);
 
     const isValidUsername = () => {
         const usernames = usersList.map((user: userDataType) => user.username);

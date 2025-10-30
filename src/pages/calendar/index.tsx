@@ -44,23 +44,37 @@ const UserStatusCalendar: FC = () => {
         return processedData[0] ? processedData[0][date.getTime()] : null;
     };
 
-    const formatOOOMessage = (oooEntries: OOOEntry[]): string => {
-        return oooEntries
-            .map((entry) => {
-                const fromDate = formatTimestampToDate(entry.from);
-                const untilDate = formatTimestampToDate(entry.until);
-                const requestLink = `${OOO_REQUEST_DETAILS_URL}`;
-
-                let messageText = `From: ${fromDate}\nUntil: ${untilDate}\nRequest ID: `;
-                messageText += `<a href="${requestLink}" target="_blank" rel="noopener noreferrer">${entry.requestId}</a>`;
-
-                if (entry.message) {
-                    messageText += `\nMessage: ${entry.message}`;
-                }
-
-                return messageText;
-            })
-            .join('\n\n---\n\n');
+    const formatOOOMessage = (oooEntries: OOOEntry[]): JSX.Element => {
+        return (
+            <>
+                {oooEntries.map((entry, index) => (
+                    <div key={entry.requestId}>
+                        {index > 0 && (
+                            <hr
+                                style={{
+                                    margin: '10px 0',
+                                    border: 'none',
+                                    borderTop: '1px solid #ccc',
+                                }}
+                            />
+                        )}
+                        <div>From: {formatTimestampToDate(entry.from)}</div>
+                        <div>Until: {formatTimestampToDate(entry.until)}</div>
+                        <div>
+                            Request ID:{' '}
+                            <a
+                                href={`${OOO_REQUEST_DETAILS_URL}${entry.requestId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                {entry.requestId}
+                            </a>
+                        </div>
+                        {entry.message && <div>Message: {entry.message}</div>}
+                    </div>
+                ))}
+            </>
+        );
     };
 
     const handleDayClick = (
@@ -87,10 +101,7 @@ const UserStatusCalendar: FC = () => {
                     } is OOO on ${value.getDate()}-${
                         MONTHS[value.getMonth()]
                     }-${value.getFullYear()}`}</div>
-                    <div
-                        style={{ marginTop: '10px', whiteSpace: 'pre-line' }}
-                        dangerouslySetInnerHTML={{ __html: formattedMessage }}
-                    />
+                    <div style={{ marginTop: '10px' }}>{formattedMessage}</div>
                 </div>
             );
             return;

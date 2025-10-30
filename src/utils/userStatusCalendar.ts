@@ -12,15 +12,7 @@ interface LOG_DATA {
     taskTitle: string;
 }
 
-export interface OOOEntry {
-    from: number;
-    until: number;
-    requestId: string;
-    message?: string;
-    timestamp: number;
-    user?: string;
-    type: string;
-}
+export type OOOEntry = LogEntry;
 
 export const getStartOfDay = (date: Date): Date => {
     if (date instanceof Date && !isNaN(date.getTime()))
