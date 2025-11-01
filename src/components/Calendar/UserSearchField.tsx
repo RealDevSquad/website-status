@@ -1,4 +1,4 @@
-import { useState, useEffect, ChangeEvent, useRef, useMemo } from 'react';
+import { useState, useEffect, ChangeEvent, useRef } from 'react';
 import classNames from './UserSearchField.module.scss';
 import { useGetAllUsersQuery } from '@/app/services/usersApi';
 import { useGetLogsByUsernameQuery } from '@/app/services/logsApi';
@@ -6,11 +6,12 @@ import { logs } from '@/constants/calendar';
 import { userDataType } from '@/interfaces/user.type';
 import { useOutsideAlerter } from '@/hooks/useOutsideAlerter';
 import { LogEntry } from '@/app/services/logsApi';
+import { LOG_DATA } from '@/utils/userStatusCalendar';
 
 type SearchFieldProps = {
     onSearchTextSubmitted: (
         user: userDataType | undefined,
-        data: any,
+        data: Array<{ userId: string; data: LOG_DATA[] }>,
         oooLogsData?: LogEntry[]
     ) => void;
     loading: boolean;
@@ -50,18 +51,16 @@ const SearchField = ({
     const { data: userData, isError, isLoading } = useGetAllUsersQuery();
     const [usersList, setUsersList] = useState<userDataType[]>([]);
     const [displayList, setDisplayList] = useState<userDataType[]>([]);
-    const [data, setData] = useState([]);
+    const [data, setData] = useState<
+        Array<{ userId: string; data: LOG_DATA[] }>
+    >([]);
 
-    const queryParams = useMemo(
-        () => ({
-            username: selectedUser?.username || '',
-        }),
-        [selectedUser?.username]
+    const { data: logsData } = useGetLogsByUsernameQuery(
+        { username: selectedUser?.username || '' },
+        {
+            skip: !dev || !selectedUser?.username,
+        }
     );
-
-    const { data: logsData } = useGetLogsByUsernameQuery(queryParams, {
-        skip: !dev || !selectedUser?.username,
-    });
 
     useEffect(() => {
         if (userData?.users) {
@@ -69,28 +68,27 @@ const SearchField = ({
             const filteredUsers: userDataType[] = users.filter(
                 (user: userDataType) => !user.incompleteUserDetails
             );
-            const logData: any = filteredUsers.map((user: userDataType) => {
-                const log = logs[Math.floor(Math.random() * 4)];
-                return {
-                    data: log,
-                    userId: user.id,
-                };
-            });
+            const logData: Array<{ userId: string; data: LOG_DATA[] }> =
+                filteredUsers.map((user: userDataType) => {
+                    const log = logs[Math.floor(Math.random() * 4)];
+                    return {
+                        data: log,
+                        userId: user.id,
+                    };
+                });
             setData(logData);
             setUsersList(filteredUsers);
         }
     }, [isLoading, userData]);
 
     useEffect(() => {
-        if (
-            dev &&
-            logsData?.data &&
-            selectedUser &&
-            lastProcessedUsername.current !== selectedUser.username
-        ) {
-            lastProcessedUsername.current = selectedUser.username || null;
-            onSearchTextSubmitted(selectedUser, data, logsData.data);
-        }
+        const username = selectedUser?.username;
+
+        if (!dev || !logsData?.data || !username) return;
+        if (lastProcessedUsername.current === username) return;
+
+        lastProcessedUsername.current = username;
+        onSearchTextSubmitted(selectedUser, data, logsData.data);
     }, [dev, logsData, selectedUser, data]);
 
     const isValidUsername = () => {

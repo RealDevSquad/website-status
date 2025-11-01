@@ -1,15 +1,10 @@
 import { LogEntry } from '@/app/services/logsApi';
 
-interface LOG_TYPE {
-    userId: string;
-    data: [];
-}
-
-interface LOG_DATA {
+export interface LOG_DATA {
     status: string;
     startTime: number;
     endTime: number;
-    taskTitle: string;
+    taskTitle?: string;
 }
 
 export type OOOEntry = LogEntry;
@@ -44,9 +39,9 @@ export const getDatesInRange = (startDate: Date, endDate: Date) => {
 
 export const processOOOLogsData = (
     logsData: LogEntry[]
-): [Record<number, OOOEntry[]>, Record<number, string>] => {
-    const dictWithOOOEntries: Record<number, OOOEntry[]> = {};
-    const dictWithTask: Record<number, string> = {};
+): [Map<number, OOOEntry[]>, Map<number, string>] => {
+    const dictWithOOOEntries = new Map<number, OOOEntry[]>();
+    const dictWithTask = new Map<number, string>();
 
     logsData.forEach((logEntry: LogEntry) => {
         const dates = getDatesInRange(
@@ -55,10 +50,12 @@ export const processOOOLogsData = (
         );
 
         dates.forEach((dateTimestamp) => {
-            if (!dictWithOOOEntries[dateTimestamp]) {
-                dictWithOOOEntries[dateTimestamp] = [];
+            const existingEntries = dictWithOOOEntries.get(dateTimestamp);
+            if (existingEntries) {
+                existingEntries.push(logEntry);
+            } else {
+                dictWithOOOEntries.set(dateTimestamp, [logEntry]);
             }
-            dictWithOOOEntries[dateTimestamp].push(logEntry);
         });
     });
 
@@ -67,19 +64,21 @@ export const processOOOLogsData = (
 
 export const processData = (
     itemId: string | null,
-    data: [],
+    data: Array<{ userId: string; data: LOG_DATA[] }>,
     oooLogsData?: LogEntry[]
-): [object, object, Record<number, OOOEntry[]>] => {
+): [Map<number, string>, Map<number, string>, Map<number, OOOEntry[]>] => {
     if (!itemId) {
-        return [{}, {}, {}];
+        return [new Map(), new Map(), new Map()];
     } else {
-        const log: any = data.find((log: LOG_TYPE) => {
-            return log.userId === itemId;
-        });
+        const log: { userId: string; data: LOG_DATA[] } | undefined = data.find(
+            (log: { userId: string; data: LOG_DATA[] }) => {
+                return log.userId === itemId;
+            }
+        );
 
-        const dictWithStatus: Record<number, string> = {};
-        const dictWithTask: Record<number, string> = {};
-        const dictWithOOOEntries: Record<number, OOOEntry[]> = {};
+        const dictWithStatus = new Map<number, string>();
+        const dictWithTask = new Map<number, string>();
+        const dictWithOOOEntries = new Map<number, OOOEntry[]>();
 
         if (log && log.data?.length > 0) {
             log.data.forEach((logData: LOG_DATA) => {
@@ -89,11 +88,14 @@ export const processData = (
                 );
                 if (logData.status === 'ACTIVE') {
                     dates.forEach((dateTimestamp) => {
-                        dictWithTask[dateTimestamp] = logData.taskTitle;
+                        dictWithTask.set(
+                            dateTimestamp,
+                            logData.taskTitle || ''
+                        );
                     });
                 } else {
                     dates.forEach((dateTimestamp) => {
-                        dictWithStatus[dateTimestamp] = logData.status;
+                        dictWithStatus.set(dateTimestamp, logData.status);
                     });
                 }
             });
@@ -101,10 +103,12 @@ export const processData = (
 
         if (oooLogsData && oooLogsData.length > 0) {
             const [oooEntries] = processOOOLogsData(oooLogsData);
-            Object.assign(dictWithOOOEntries, oooEntries);
+            oooEntries.forEach((entries, dateTimestamp) => {
+                dictWithOOOEntries.set(dateTimestamp, entries);
+            });
 
-            Object.keys(oooEntries).forEach((dateTimestamp) => {
-                dictWithStatus[parseInt(dateTimestamp)] = 'OOO';
+            oooEntries.forEach((_, dateTimestamp) => {
+                dictWithStatus.set(dateTimestamp, 'OOO');
             });
         }
 

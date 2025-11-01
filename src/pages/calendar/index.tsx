@@ -11,6 +11,12 @@ import { OOO_REQUEST_DETAILS_URL } from '@/constants/url';
 import { MONTHS } from '@/constants/calendar';
 import { userDataType } from '@/interfaces/user.type';
 
+type ProcessCalendarData = [
+    Map<number, string>,
+    Map<number, string>,
+    Map<number, OOOEntry[]>
+];
+
 const UserStatusCalendar: FC = () => {
     const router = useRouter();
     const { dev } = router.query;
@@ -18,30 +24,21 @@ const UserStatusCalendar: FC = () => {
 
     const [selectedDate, onDateChange] = useState<Date>(new Date());
     const [selectedUser, setSelectedUser] = useState<userDataType | null>(null);
-    const [processedData, setProcessedData] = useState<
-        [
-            Record<number, string>,
-            Record<number, string>,
-            Record<number, OOOEntry[]>
-        ]
-    >([{}, {}, {}] as [
-        Record<number, string>,
-        Record<number, string>,
-        Record<number, OOOEntry[]>
+    const [processedData, setProcessedData] = useState<ProcessCalendarData>([
+        new Map(),
+        new Map(),
+        new Map(),
     ]);
-
     const [message, setMessage] = useState<string | JSX.Element | null>(null);
 
     const setTileClassName = ({ date }: { date: Date }) => {
         if (date.getDay() === 0) return 'sunday';
 
-        // Check for OOO entries first (new API data)
-        if (processedData[2] && processedData[2][date.getTime()]) {
+        if (processedData[2].has(date.getTime())) {
             return 'OOO';
         }
 
-        // Check for existing status (mock data)
-        return processedData[0] ? processedData[0][date.getTime()] : null;
+        return processedData[0].get(date.getTime()) || null;
     };
 
     const formatOOOMessage = (oooEntries: OOOEntry[]): JSX.Element => {
@@ -49,15 +46,7 @@ const UserStatusCalendar: FC = () => {
             <>
                 {oooEntries.map((entry, index) => (
                     <div key={entry.requestId}>
-                        {index > 0 && (
-                            <hr
-                                style={{
-                                    margin: '10px 0',
-                                    border: 'none',
-                                    borderTop: '1px solid #ccc',
-                                }}
-                            />
-                        )}
+                        {index > 0 && <div style={{ marginTop: '10px' }} />}
                         <div>From: {formatTimestampToDate(entry.from)}</div>
                         <div>Until: {formatTimestampToDate(entry.until)}</div>
                         <div>
@@ -77,6 +66,24 @@ const UserStatusCalendar: FC = () => {
         );
     };
 
+    const formatOOODayMessage = (
+        value: Date,
+        selectedUser: userDataType | null,
+        oooEntries: OOOEntry[]
+    ): JSX.Element => {
+        const dateStr = `${value.getDate()}-${
+            MONTHS[value.getMonth()]
+        }-${value.getFullYear()}`;
+        const userLine = `${selectedUser?.username} is OOO on ${dateStr}`;
+        const oooDetails = formatOOOMessage(oooEntries);
+        return (
+            <div>
+                <div>{userLine}</div>
+                <div style={{ marginTop: '10px' }}>{oooDetails}</div>
+            </div>
+        );
+    };
+
     const handleDayClick = (
         value: Date,
         event: React.MouseEvent<HTMLButtonElement>
@@ -90,20 +97,14 @@ const UserStatusCalendar: FC = () => {
             return;
         }
 
-        // Check for OOO entries first (new feature)
-        if (processedData[2] && processedData[2][value.getTime()]) {
-            const oooEntries = processedData[2][value.getTime()];
-            const formattedMessage = formatOOOMessage(oooEntries);
-            setMessage(
-                <div>
-                    <div>{`${
-                        selectedUser?.username
-                    } is OOO on ${value.getDate()}-${
-                        MONTHS[value.getMonth()]
-                    }-${value.getFullYear()}`}</div>
-                    <div style={{ marginTop: '10px' }}>{formattedMessage}</div>
-                </div>
+        const oooEntries = processedData[2].get(value.getTime());
+        if (oooEntries) {
+            const message = formatOOODayMessage(
+                value,
+                selectedUser,
+                oooEntries
             );
+            setMessage(message);
             return;
         }
 
@@ -123,13 +124,12 @@ const UserStatusCalendar: FC = () => {
             );
             return;
         }
-        if (processedData[1] && processedData[1][value.getTime()]) {
+        const taskTitle = processedData[1].get(value.getTime());
+        if (taskTitle) {
             setMessage(
                 `${selectedUser?.username} is ACTIVE on ${value.getDate()}-${
                     MONTHS[value.getMonth()]
-                }-${value.getFullYear()} having task with title - ${
-                    processedData[1][value.getTime()]
-                }`
+                }-${value.getFullYear()} having task with title - ${taskTitle}`
             );
             return;
         }
@@ -156,13 +156,7 @@ const UserStatusCalendar: FC = () => {
                             data,
                             oooLogsData
                         );
-                        setProcessedData(
-                            processed as [
-                                Record<number, string>,
-                                Record<number, string>,
-                                Record<number, OOOEntry[]>
-                            ]
-                        );
+                        setProcessedData(processed);
                         setMessage(null);
                     }}
                     loading={false}
