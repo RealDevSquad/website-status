@@ -99,6 +99,7 @@ const SearchField = ({ onSearchTextSubmitted, loading }: SearchFieldProps) => {
                 {displayList.map((user: userDataType) => (
                     <li
                         key={user.id}
+                        role="listitem"
                         className={classNames.suggestion}
                         onClick={() => {
                             setSearchText(user.username || '');
