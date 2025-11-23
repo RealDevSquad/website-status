@@ -548,7 +548,7 @@ describe('Task card', () => {
             {}
         );
         const spanElement = screen.getByTestId('started-on');
-        expect(spanElement).toHaveTextContent(/Started \d+ years ago/); // Mocked date from moment
+        expect(spanElement).toHaveTextContent(/Started \d+ years ago/);
     });
     it('Should show the status of the task', () => {
         renderWithRouter(
