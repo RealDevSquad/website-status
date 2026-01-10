@@ -627,7 +627,7 @@ const Card: FC<CardProps> = ({
                 {showAssignButton() && <AssigneeButton />}
             </div>
 
-            {(isEditable || (isDevMode && isSelfTask)) && (
+            {(isEditable || isSelfTask) && (
                 <div className={styles.taskStatusControl}>
                     <div className={styles.taskStatusEditMode}>
                         <TaskStatusEditMode
