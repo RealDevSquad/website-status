@@ -89,7 +89,7 @@ describe('Navbar', () => {
         );
         expect(eventLink).toHaveAttribute(
             'href',
-            'https://www.realdevsquad.com/events.html'
+            'https://www.realdevsquad.com/events'
         );
         expect(memberLink).toHaveAttribute(
             'href',
