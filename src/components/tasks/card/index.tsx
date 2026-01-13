@@ -575,7 +575,7 @@ const Card: FC<CardProps> = ({
                             : `Started ${getStartedAgo()}`}
                     </span>
                 </div>
-                {!isDevMode && !isSelfTask && (
+                {!isSelfTask && (
                     <div className={styles.statusContainer}>
                         <p className={styles.cardSpecialFont}>Status:</p>
                         <p
