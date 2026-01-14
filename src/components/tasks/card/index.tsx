@@ -575,7 +575,7 @@ const Card: FC<CardProps> = ({
                             : `Started ${getStartedAgo()}`}
                     </span>
                 </div>
-                {!isDevMode && (
+                {!isSelfTask && (
                     <div className={styles.statusContainer}>
                         <p className={styles.cardSpecialFont}>Status:</p>
                         <p
@@ -627,7 +627,7 @@ const Card: FC<CardProps> = ({
                 {showAssignButton() && <AssigneeButton />}
             </div>
 
-            {(isEditable || (isDevMode && isSelfTask)) && (
+            {(isEditable || isSelfTask) && (
                 <div className={styles.taskStatusControl}>
                     <div className={styles.taskStatusEditMode}>
                         <TaskStatusEditMode
