@@ -537,6 +537,8 @@ describe('Task card', () => {
     });
 
     it('renders "Started" with a specific date if status is not AVAILABLE', () => {
+        jest.useFakeTimers();
+        jest.setSystemTime(new Date('2025-01-01T00:00:00Z'));
         const { getByTestId } = renderWithRouter(
             <Provider store={store()}>
                 <Card
@@ -549,6 +551,7 @@ describe('Task card', () => {
         );
         const spanElement = screen.getByTestId('started-on');
         expect(spanElement).toHaveTextContent('Started 4 years ago'); // Mocked date from moment
+        jest.useRealTimers();
     });
     it('Should show the status of the task', () => {
         renderWithRouter(
