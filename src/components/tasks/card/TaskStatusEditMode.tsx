@@ -68,10 +68,9 @@ const TaskStatusEditMode = ({
             payload.percentCompleted = newProgress;
         }
 
-        const taskStatusUpdatePromise =
-            isDevMode && isSelfTask
-                ? updateSelfTask({ id: task.id, task: payload })
-                : updateTask({ id: task.id, task: payload });
+        const taskStatusUpdatePromise = isSelfTask
+            ? updateSelfTask({ id: task.id, task: payload })
+            : updateTask({ id: task.id, task: payload });
 
         setEditedTaskDetails((prev: CardTaskDetails) => ({
             ...prev,
