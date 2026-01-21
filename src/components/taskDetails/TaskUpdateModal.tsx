@@ -5,7 +5,6 @@ import getCurrentDate from '@/utils/getLatestDate';
 import { questions } from '@/constants/ProgressUpdates';
 import ProgressForm from '../ProgressForm/ProgressForm';
 import task from '@/interfaces/task.type';
-import { useRouter } from 'next/router';
 import { IoMdClose } from 'react-icons/io';
 type Props = {
     isOpen: boolean;
@@ -26,22 +25,17 @@ function TaskUpdateModal({
     editedTaskDetails,
     onUpdateSuccess,
 }: Props) {
-    const router = useRouter();
-    const { dev } = router.query;
-
     return (
         <Modal isOpen={isOpen} toggle={() => setIsOpen(false)}>
             <div className={styles.taskUpdateModal}>
-                {dev === 'true' && (
-                    <button
-                        className={styles.closeButton}
-                        onClick={() => setIsOpen(false)}
-                        data-testid="task-update-modal-close-button"
-                        aria-label="Close"
-                    >
-                        <IoMdClose size={25} />
-                    </button>
-                )}
+                <button
+                    className={styles.closeButton}
+                    onClick={() => setIsOpen(false)}
+                    data-testid="task-update-modal-close-button"
+                    aria-label="Close"
+                >
+                    <IoMdClose size={25} />
+                </button>
                 <h3 className={styles.updateProgress}>Update Progress</h3>
                 <section className={styles.containerUpdate}>
                     <h1 className={styles.formHeading}>Task Updates</h1>

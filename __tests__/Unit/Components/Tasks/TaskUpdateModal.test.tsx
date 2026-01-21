@@ -181,7 +181,6 @@ describe('TaskUpdateModal', () => {
         expect(mockOnUpdateSuccess).toHaveBeenCalled();
         expect(mockSetIsOpen).toHaveBeenCalledWith(false);
     });
-
     it('should call the setIsOpen when close button is clicked', async () => {
         renderWithRouter(
             <Provider store={store()}>
@@ -196,27 +195,5 @@ describe('TaskUpdateModal', () => {
 
         fireEvent.click(closeButton);
         expect(mockSetIsOpen).toHaveBeenCalledWith(false);
-    });
-
-    it('should show the close button when dev is true', () => {
-        renderWithRouter(<TaskUpdateModal {...defaultProps} />, {
-            query: { dev: 'true' },
-        });
-
-        const closeButton = screen.getByTestId(
-            'task-update-modal-close-button'
-        );
-        expect(closeButton).toBeInTheDocument();
-    });
-
-    it('should not show the close button when dev is false', async () => {
-        renderWithRouter(<TaskUpdateModal {...defaultProps} />, {
-            query: { dev: 'false' },
-        });
-
-        const closeButton = screen.queryByTestId(
-            'task-update-modal-close-button'
-        );
-        expect(closeButton).not.toBeInTheDocument();
     });
 });
