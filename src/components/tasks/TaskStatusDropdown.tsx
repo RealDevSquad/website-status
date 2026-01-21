@@ -160,17 +160,11 @@ export function TaskStatusDropdown({
                 data-testid={isDevMode ? 'task-status-label' : undefined}
             >
                 Status:{' '}
-                {newStatus === BACKEND_TASK_STATUS.BACKLOG ? (
-                    <span data-testid="task-status-backlog">
-                        {beautifyStatus(newStatus)}
-                    </span>
-                ) : (
-                    <TaskStatusSelect
-                        newStatus={newStatus}
-                        handleChange={handleChange}
-                        taskStatus={taskStatus}
-                    />
-                )}
+                <TaskStatusSelect
+                    newStatus={newStatus}
+                    handleChange={handleChange}
+                    taskStatus={taskStatus}
+                />
             </label>
             <TaskDropDownModel
                 message={message}
