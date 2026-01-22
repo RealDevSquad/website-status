@@ -60,7 +60,7 @@ describe('FilterDropdown', () => {
     test('renders the modal with correct title and buttons', () => {
         renderWithRouter(
             <FilterDropdown
-                tabs={[Tab.UNASSIGNED, Tab.COMPLETED]}
+                tabs={[Tab.UNASSIGNED, Tab.DONE]}
                 onSelect={mockOnSelect}
                 activeTab={Tab.UNASSIGNED}
                 onClose={mockOnClose}
@@ -76,8 +76,8 @@ describe('FilterDropdown', () => {
         const unassignedButton = screen.getByText(/unassigned/i);
         expect(unassignedButton).toBeInTheDocument();
 
-        const completedButton = screen.getByText(/completed/i);
-        expect(completedButton).toBeInTheDocument();
+        const doneButton = screen.getByText(/done/i);
+        expect(doneButton).toBeInTheDocument();
     });
 
     test('calls onSelect and onClose when a status button is clicked', () => {
@@ -170,15 +170,15 @@ describe('FilterDropdown', () => {
     test('renders the modal with correct active tab', () => {
         renderWithRouter(
             <FilterDropdown
-                tabs={[Tab.UNASSIGNED, Tab.COMPLETED]}
+                tabs={[Tab.UNASSIGNED, Tab.DONE]}
                 onSelect={mockOnSelect}
-                activeTab={Tab.COMPLETED}
+                activeTab={Tab.DONE}
                 onClose={mockOnClose}
             />
         );
 
-        const completedButton = screen.getByText(/completed/i);
-        expect(completedButton).toHaveClass('status-button-active');
+        const doneButton = screen.getByText(/done/i);
+        expect(doneButton).toHaveClass('status-button-active');
 
         const unassignedButton = screen.getByText(/unassigned/i);
         expect(unassignedButton).not.toHaveClass('status-button-active');
@@ -217,7 +217,7 @@ describe('FilterDropdown', () => {
     test('Selection of the Backlog Button', () => {
         renderWithRouter(
             <FilterDropdown
-                tabs={[Tab.BACKLOG, Tab.COMPLETED]}
+                tabs={[Tab.BACKLOG, Tab.DONE]}
                 onSelect={mockOnSelect}
                 activeTab={Tab.BACKLOG}
                 onClose={mockOnClose}
@@ -227,21 +227,18 @@ describe('FilterDropdown', () => {
         const backlogButton = screen.getByText(/backlog/i);
         expect(backlogButton).toHaveClass('status-button-active');
 
-        const completedButton = screen.getByText(/completed/i);
-        expect(completedButton).not.toHaveClass('status-button-active');
+        const doneButton = screen.getByText(/done/i);
+        expect(doneButton).not.toHaveClass('status-button-active');
     });
 
-    it('Renders Task tab Done, when dev flag is on', async () => {
+    it('Renders Task tab Done', async () => {
         renderWithRouter(
             <FilterDropdown
                 tabs={[Tab.BACKLOG, Tab.COMPLETED, Tab.DONE]}
                 onSelect={mockOnSelect}
                 activeTab={Tab.DONE}
                 onClose={mockOnClose}
-            />,
-            {
-                query: { dev: 'true' },
-            }
+            />
         );
 
         const doneButton = screen.queryByText(/done/i);
@@ -249,20 +246,5 @@ describe('FilterDropdown', () => {
 
         expect(doneButton).toBeInTheDocument();
         expect(completedButton).toBeNull();
-    });
-    it('Renders Task status Completed, when dev flag is not on', async () => {
-        renderWithRouter(
-            <FilterDropdown
-                tabs={[Tab.BACKLOG, Tab.COMPLETED, Tab.DONE]}
-                onSelect={mockOnSelect}
-                activeTab={Tab.COMPLETED}
-                onClose={mockOnClose}
-            />
-        );
-        const doneButton = screen.queryByText(/done/i);
-        const completedButton = screen.queryByText(/completed/i);
-
-        expect(completedButton).toBeInTheDocument();
-        expect(doneButton).toBeNull();
     });
 });

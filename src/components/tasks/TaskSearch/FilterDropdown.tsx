@@ -49,10 +49,7 @@ const FilterDropdown = ({
                         .filter(
                             (tab: Tab) =>
                                 !depreciatedTaskStatus.includes(tab) &&
-                                !(
-                                    (isDevMode && tab === 'COMPLETED') ||
-                                    (!isDevMode && tab === 'DONE')
-                                )
+                                tab !== 'COMPLETED'
                         )
                         .map((tab) => (
                             <button
