@@ -16,9 +16,13 @@ Read <a href="https://github.com/Real-Dev-Squad/website-welcome/blob/main/CONTRI
 ### Development  
 To run the project `yarn run dev`.
 
-#### To run the project with Mocked APIs
+#### To run the project with Mocked APIs we use [Mock service worker](https://mswjs.io/docs/)
 - Configure your development browser to trust `https://localhost` with invalid certificate, follow [this doc](https://mswjs.io/docs/recipes/using-local-https#trust-insecure-localhost)
 - Make sure the variable `NEXT_PUBLIC_API_MOCKING` is `ON` in [`.env.development`](https://github.com/Real-Dev-Squad/website-status/blob/develop/.env.development) file
+- Replace the `NEXT_PUBLIC_BASE_URL='https://api.realdevsquad.com'` with `NEXT_PUBLIC_BASE_URL='https://localhost'` in [`.env.development`](https://github.com/Real-Dev-Squad/website-status/blob/develop/.env.development) file
+- Go to [http://localhost:3000](http://localhost:3000)
+
+You should now be able to see `mocking enabled` in browser console
 
 ### Production  
 To do a production build `yarn run start`.
