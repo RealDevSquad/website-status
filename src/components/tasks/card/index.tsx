@@ -236,7 +236,7 @@ const Card: FC<CardProps> = ({
     const hasIssueAssignee = () => cardDetails.github?.issue.assignee ?? false;
     const hasTaskAssignee = () => cardDetails.assignee ?? false;
     const isIssueClosed = () => cardDetails.github?.issue?.status === 'closed';
-    const isTaskComplete = () => cardDetails.status === COMPLETED;
+    const isTaskComplete = () => cardDetails.status === DONE;
 
     const showAssignButton = () =>
         hasIssueAssignee() &&

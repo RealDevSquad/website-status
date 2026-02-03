@@ -274,11 +274,12 @@ describe('Task card', () => {
         expect(assignToText).toBeInTheDocument();
     });
 
-    it('Should not render "Assign to username" button when parent issue has an assignee and is open, the task status is "Completed" and has not been assigned', function () {
+    it('Should not render "Assign to username" button when parent issue has an assignee and is open, the task status is "Done" and has not been assigned', function () {
         const PROPS = {
             ...DEFAULT_PROPS,
             content: {
                 ...DEFAULT_PROPS.content,
+                status: 'DONE',
                 assignee: undefined,
                 github: {
                     issue: {
